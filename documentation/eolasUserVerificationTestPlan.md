@@ -171,6 +171,19 @@ For each test record:
 ### UV-001 – Fresh installation / first launch
 **Priority:** Critical
 
+#### Installation Instructions
+
+1. Open:
+   https://github.com/Glawster/clannEolas/releases/tag/v0.1.0-macos-test1
+2. Under Assets, download:
+   ClannEolas-0.1.0-macos-arm64.pkg
+3. Save it to Downloads.
+4. Optional but recommended: verify the checksum in Terminal:
+
+   shasum -a 256 ~/Downloads/ClannEolas-0.1.0-macos-arm64.pkg
+5. Confirm the result is:
+   6e82503a76a0ef4006e1f9c1b674b4fd521a9f2d2b35a2b43173d6003792ccb0
+
 **Preconditions:** No existing Eolas user data or configuration on the test machine.
 
 **Steps:**
