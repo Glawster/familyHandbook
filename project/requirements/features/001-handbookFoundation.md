@@ -109,7 +109,7 @@ clear that it is not legal, medical or financial advice.
 - Documentation: [product vision](../../../documentation/productVision.md)
 - Pull request: pending
 - Agent runs: 2026-07-28 — Codex, refinement role, criteria 1–3, using
-  [`refine.md`](../prompt/001-handbookFoundation/refine.md); result recorded in
+  [refinement prompt](../prompt/001-handbookFoundation.md); result recorded in
   this requirement and proposed ADR-0009.
 
 ## Change history

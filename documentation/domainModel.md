@@ -4,7 +4,7 @@ The domain model describes the real-world concepts clanneolas.com organises and
 how they relate. It is not a database schema, file format, API design or
 application architecture.
 
-# Mission
+## Mission
 
 **clanneolas.com provides a shared language for organising the practical
 knowledge families need before, during and after life's unexpected events.**
@@ -318,3 +318,41 @@ This first model intentionally does not settle:
 
 Those choices require evidence, requirements and ADRs. They must not be inferred
 from the illustrative candidate information in this document.
+## Implemented shared-domain foundation
+
+The Phase 1 knowledge kernel now implements the common concepts beneath future
+domain modules. It is deliberately independent of CLI, curses, Qt and concrete
+storage. The canonical boundary is a set of typed domain values, commands and
+services; YAML is only the current local adapter.
+
+Every new aggregate has an opaque `RecordIdentity` containing its Clann and one
+owner module. Typed `RecordReference` values cross aggregate/module boundaries
+without transferring ownership and reject cross-Clann use. Names, slugs,
+filenames and external identifiers are never canonical identity. Prototype
+Clann bootstrap records retain their earlier readable IDs pending migration.
+
+Availability is explicit through `Fact`: `known`, `unknown`, `notApplicable`
+and `absent` are distinct and are never silently coerced. Temporal facts use an
+`Observation` with an `asOf` time, provenance, confirmation status and optional
+confidence. `Identifier`, `Money`, `Schedule`, `Jurisdiction`, `ReviewState`,
+`EvidenceReference` and `Provenance` are reusable value compositions.
+
+The shared party model distinguishes `Person`, lightweight `Contact`, legal
+`Organisation`, familiar `OrganisationBrand`, dated contact routes and domain-
+owned provider roles. `PartyRole` does not imply ownership or authority.
+`Authority` describes scope and legal/practical state; provider-specific
+`AuthorityRegistration` separately describes operational recognition.
+
+`ContinuityDependency` is a typed directed reference between records. The
+shared graph service validates Clann scope and performs forward, reverse and
+cycle-safe traversal with human-readable explanations. Modules own the meaning
+of edge types they publish and retain ownership of their aggregates.
+
+Persistence uses a versioned `RecordStore` port with atomic change sets,
+expected-version conflicts, append-only prior versions and explicit migrations.
+The implemented YAML adapter demonstrates the contract but its document shape
+is not a domain schema.
+
+The existing generic capture profiles remain prototype input support for
+requirements 009–018. They now translate into typed commands and shared
+validation, but they are not the completed Banking or other domain models.

@@ -6,7 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
-from eolas.capture.models import CAPTURE_PROFILES, CaptureInput
+from eolas.capture.adapter import captureCommandBuild
+from eolas.capture.models import CaptureInput
 from eolas.clann.slugs import slugCreate
 from eolas.clann.yaml_io import yamlWrite
 
@@ -25,7 +26,6 @@ def capturePrepare(
     timestampProvider: Optional[TimestampProvider] = None,
 ) -> tuple[Path, Dict[str, Any]]:
     """Validate a capture and return its destination and canonical document."""
-    capture.captureValidate()
     clannPath = clannPath.expanduser().resolve()
     if not clannPath.is_dir() or not (clannPath / "clann.yaml").is_file():
         raise CaptureWriteError(f"Not an Eolas Clann directory: {clannPath}")
@@ -38,16 +38,22 @@ def capturePrepare(
         )
 
     slug = slugCreate(capture.label)
-    profile = CAPTURE_PROFILES[capture.domain]
+    command = captureCommandBuild(capture, _clannIdRead(clannPath), timestamp)
     targetPath = clannPath / "shared" / capture.domain / f"{slug}.yaml"
     document = {
-        "schema": f"eolas/{profile.schema_name}/v1",
-        "id": f"{profile.schema_name}-{slug}",
-        "clannRef": _clannIdRead(clannPath),
-        "label": capture.label.strip(),
-        "data": dict(capture.fields),
+        "schema": f"eolas/{command.schema_name}/v1",
+        "schemaVersion": 1,
+        "recordVersion": 1,
+        "id": command.identity.record_id,
+        "aggregateType": command.identity.aggregate_type,
+        "ownerModule": command.identity.owner_module,
+        "clannRef": command.identity.clann_id,
+        "label": command.label,
+        "classification": command.classification.value,
+        "data": dict(command.fields),
         "metadata": {
-            "source": capture.source.strip(),
+            "source": command.provenance.source_reference,
+            "sourceType": command.provenance.source_type,
             "capturedAt": timestamp.isoformat(),
             "modified": timestamp.isoformat(),
         },

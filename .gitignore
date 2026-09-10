@@ -1,5 +1,8 @@
 # app specefic files
-data/
+data/*
+!data/conformance/
+data/conformance/*
+!data/conformance/phaseOneFictionalScenario.yaml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -990,8 +990,8 @@ Before implementation, ADRs must settle:
 
 ## Traceability
 
-- Implementation: pending
-- Tests: pending
+- Implementation: shared Phase 1 import targets (typed identities, provenance, evidence references, observations and atomic command/store boundary); import framework pending
+- Tests: shared-kernel, storage, security, graph and capture-adapter conformance tests implemented; domain acceptance tests pending
 - Documentation: [product vision](../../../documentation/productVision.md),
   [principles](../../../documentation/principles.md),
   [domain model](../../../documentation/domainModel.md),

@@ -55,6 +55,11 @@ def test_capturePrepare_supportsRequirements009Through018(
     assert document["schema"].startswith("eolas/")
     assert document["clannRef"] == "clann-example-clann"
     assert document["metadata"]["source"] == "statement"
+    firstField = CAPTURE_PROFILES[domain].required_fields[0]
+    assert document["data"][firstField] == {
+        "state": "known",
+        "value": "known",
+    }
 
 
 def test_captureValidate_reportsAllMissingRequiredFields() -> None:
@@ -82,6 +87,34 @@ def test_captureValidate_rejectsCredentialsAndFullCardNumbers(
         CaptureInput("banking", "Bills", fields, "statement").captureValidate()
 
 
+@pytest.mark.parametrize(
+    "harmlessField",
+    ["shippingAddress", "opinion", "pensionProvider", "pinningNote"],
+)
+def test_captureValidate_allowsHarmlessSecretSubstrings(harmlessField: str) -> None:
+    fields = _validFields("banking")
+    fields[harmlessField] = "fictional safe value"
+
+    CaptureInput("banking", "Bills", fields, "statement").captureValidate()
+
+
+def test_captureAdapter_preservesUnknownAndNotApplicable(
+    clannPath: Path,
+) -> None:
+    fields = _validFields("banking")
+    fields["institution"] = "unknown"
+    fields["accountCategory"] = "notApplicable"
+
+    _target, document = capturePrepare(
+        CaptureInput("banking", "Bills", fields, "statement"),
+        clannPath,
+        timestampProvider=lambda: TEST_TIME,
+    )
+
+    assert document["data"]["institution"] == {"state": "unknown"}
+    assert document["data"]["accountCategory"] == {"state": "notApplicable"}
+
+
 def test_captureWrite_isAtomicAndRefusesOverwrite(clannPath: Path) -> None:
     capture = CaptureInput("banking", "Bills", _validFields("banking"), "statement")
     targetPath, document = capturePrepare(
@@ -94,6 +127,8 @@ def test_captureWrite_isAtomicAndRefusesOverwrite(clannPath: Path) -> None:
 
     loaded = yaml.safe_load(targetPath.read_text(encoding="utf-8"))
     assert loaded == document
+    assert document["id"].startswith("rec_")
+    assert document["ownerModule"] == "banking"
     assert list(targetPath.parent.glob(".*.yaml")) == []
 
 

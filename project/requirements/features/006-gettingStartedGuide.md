@@ -59,7 +59,7 @@ help and formal legal authority, and remain useful in Markdown and on paper.
 
 - Implementation: [Getting Started](../../../handbook/01-GettingStarted.md), [Annual Review](../../../handbook/11-AnnualReview.md)
 - Tests: pending
-- Documentation: [domain model](../../../documentation/domainModel.md), [glossary](../../../documentation/glossary.md), [privacy and security](../../../documentation/privacyAndSecurity.md), [personas](../../../documentation/personas/README.md)
+- Documentation: [domain model](../../../documentation/domainModel.md), [glossary](../../../documentation/glossary.md), [privacy and security](../../../documentation/privacyAndSecurity.md), [personas](../../../documentation/personas/personasIndex.md)
 - Pull request: pending
 - Agent runs: None
 

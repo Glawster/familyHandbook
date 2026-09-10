@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any, Dict, Mapping, Tuple
 
+from eolas.domain.security import secretsValidate
+from eolas.domain.values import Classification, DomainValidationError
+
 
 class CaptureValidationError(ValueError):
     """Raised when a continuity record is incomplete or unsafe to store."""
@@ -169,30 +172,7 @@ CAPTURE_PROFILES: Dict[str, CaptureProfile] = {
     ),
 }
 
-ALLOWED_CLASSIFICATIONS = {
-    "public",
-    "private",
-    "confidential",
-    "highlyConfidential",
-}
-
-PROHIBITED_KEY_PARTS = (
-    "password",
-    "passcode",
-    "pin",
-    "cvv",
-    "cvc",
-    "securityanswer",
-    "recoverycode",
-    "seedphrase",
-    "privatekey",
-    "mfasecret",
-    "sessiontoken",
-    "accesstoken",
-    "onetimecode",
-    "signingsecret",
-    "gatewaycredential",
-)
+ALLOWED_CLASSIFICATIONS = {item.value for item in Classification}
 
 
 @dataclass(frozen=True)
@@ -243,47 +223,10 @@ class CaptureInput:
                 "lastReviewed must be an ISO date (YYYY-MM-DD)."
             ) from error
 
-        _secretsReject(self.fields)
-
-
-def _cardNumberLooksComplete(value: str) -> bool:
-    digits = "".join(character for character in value if character.isdigit())
-    if not 13 <= len(digits) <= 19:
-        return False
-    if any(character not in "0123456789 -" for character in value):
-        return False
-    checksum = 0
-    parity = len(digits) % 2
-    for index, character in enumerate(digits):
-        number = int(character)
-        if index % 2 == parity:
-            number *= 2
-            if number > 9:
-                number -= 9
-        checksum += number
-    return checksum % 10 == 0
-
-
-def _keyNormalise(key: object) -> str:
-    return "".join(character for character in str(key).lower() if character.isalnum())
-
-
-def _secretsReject(value: Any, path: str = "fields") -> None:
-    if isinstance(value, Mapping):
-        for key, child in value.items():
-            normalised = _keyNormalise(key)
-            if any(part in normalised for part in PROHIBITED_KEY_PARTS):
-                raise CaptureValidationError(
-                    f"Prohibited credential field at {path}.{key}."
-                )
-            _secretsReject(child, f"{path}.{key}")
-    elif isinstance(value, list):
-        for index, child in enumerate(value):
-            _secretsReject(child, f"{path}[{index}]")
-    elif isinstance(value, str) and _cardNumberLooksComplete(value):
-        raise CaptureValidationError(
-            f"Full payment-card number at {path} is prohibited."
-        )
+        try:
+            secretsValidate(self.fields)
+        except DomainValidationError as error:
+            raise CaptureValidationError(str(error)) from error
 
 
 def _valueMissing(value: Any) -> bool:

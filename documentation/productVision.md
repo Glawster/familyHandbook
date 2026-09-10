@@ -96,6 +96,6 @@ outline and proposed requirements, not a finished handbook or application.
 Contributors have the opportunity to shape its foundations carefully—and a
 responsibility not to describe intentions as completed work.
 
-The [project personas](personas/README.md) turn this vision into concrete,
+The [project personas](personas/personasIndex.md) turn this vision into concrete,
 fictional situations that requirements and design decisions can be tested
 against.

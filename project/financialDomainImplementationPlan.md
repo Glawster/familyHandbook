@@ -1,6 +1,6 @@
 # Financial domain implementation plan and model proposal
 
-Status: proposed  
+Status: Phase 0 and Phase 1 implemented
 Date: 2026-07-31  
 Owner: project maintainers
 
@@ -16,6 +16,12 @@ It is a planning and design proposal, not an accepted architecture decision,
 database schema, API contract or implementation specification. Significant
 choices identified here require ADR approval before code fixes them into the
 application.
+
+Phase 0 decisions were accepted on 2026-09-01 in ADRs 0012–0017. Phase 1 is
+implemented in `eolas.domain`; Phase 2 Banking remains unimplemented. The graph
+foundation was brought forward from Phase 2 because all later domains need its
+Clann isolation and traversal contract, but no Banking edge semantics or
+aggregates were added.
 
 ## Goals
 
@@ -324,7 +330,8 @@ Deliverables:
   institutions, accounts, income, essential commitments, authority and death;
 - glossary additions for observation, obligation, payment arrangement,
   continuity role and dependency; and
-- domain conformance checklist derived from requirements 008-018.
+- [domain conformance checklist](domainConformanceChecklist.md) derived from
+  requirements 008-018.
 
 Exit gate:
 
@@ -653,17 +660,24 @@ A module is ready for UI or importer implementation only when:
 
 ## Traceability
 
-- Requirements: [008-018](requirements/README.md)
+- Requirements: [008-018](requirements/requirementsIndex.md)
 - Domain model: [shared conceptual model](../documentation/domainModel.md)
 - Principles: [project principles](../documentation/principles.md)
 - Keystone decision: [ADR-0007](adr/007-knowledgeBeforeDocuments.md)
 - Projection decision: [ADR-0008](adr/008-handbookAsProjection.md)
-- Banking guidance: [guidance index](../documentation/banking/README.md)
-- Implementation: pending
-- Tests: pending
+- Phase 0 decisions: [ADRs 0012–0017](adr/adrIndex.md)
+- Phase 0/1 review: [domain conformance checklist](domainConformanceChecklist.md)
+- Banking guidance: [guidance index](../documentation/banking/bankingIndex.md)
+- Implementation: Phase 0/1 shared kernel in `eolas/domain/`; typed capture
+  adapter in `eolas/capture/`; Phase 2 and Document Import remain pending
+- Tests: shared kernel, security, dependency graph, persistence and capture
+  adapter conformance in `tests/`
 - Pull request: pending
 
 ## Change history
+
+- 2026-09-01: recorded completion of Phase 0/1 foundations and the deliberate
+  early delivery of the generic dependency graph; Banking remains Phase 2.
 
 - 2026-07-31: created from requirements 008-018 as a proposed phased plan and
   financial-domain model.

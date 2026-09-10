@@ -210,3 +210,49 @@ dealt with after death and, depending on the jurisdiction, other appointments
 or wishes. The rules for making and interpreting a valid will vary. A handbook
 may record where a current will is held, but it is not a substitute for the
 will itself.
+## Phase 1 shared-domain terms
+
+**Absent** — A fact was not provided or is not present. It is distinct from a
+confirmed unknown value and from not applicable.
+
+**Aggregate** — The smallest consistency boundary whose owner validates and
+changes it atomically.
+
+**Authority** — Dated, evidenced permission for one party to act for another
+within a jurisdiction, activation condition, scope and restrictions.
+
+**Authority Registration** — A provider's separate operational recognition of
+an Authority; it is not proof that the underlying Authority exists or is active.
+
+**Continuity Dependency** — An explained directed relationship showing that
+one canonical record relies on, funds, supports or otherwise affects another.
+
+**Continuity role** — A dated, module-owned description of how a record matters
+to household continuity, such as a primary operating relationship or essential
+service. It does not imply ownership or authority and its vocabulary belongs to
+the module publishing it.
+
+**Evidence Reference** — A classified, checksum-backed secure pointer to an
+immutable original. Evidence supports knowledge but is not automatically fact.
+
+**Identifier** — A typed external reference with masked display and optional
+protected value. It never identifies an Eolas aggregate.
+
+**Not applicable** — A fact deliberately does not apply to the subject; it is
+not missing and must not be treated as unknown.
+
+**Observation** — A value known as of a particular time with provenance and a
+confirmation or estimation status.
+
+**Obligation** — A responsibility owned by its domain module. Stopping its
+payment arrangement does not settle or cancel it.
+
+**Payment arrangement** — A future Banking-owned relationship describing how
+an obligation is paid. It is planned for Phase 2 and is not yet implemented.
+
+**Provenance** — The source, time, actor and derivation context of knowledge.
+
+**Record identity** — A stable opaque Clann-scoped ID with aggregate type and
+one owner module; it is never a name, filename, slug or provider reference.
+
+**Unknown** — The fact applies but its value is not known.

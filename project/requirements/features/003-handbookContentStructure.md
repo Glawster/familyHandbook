@@ -131,7 +131,7 @@ and review timing while keeping classifications visible.
 - Documentation: [domain model](../../../documentation/domainModel.md), [glossary](../../../documentation/glossary.md), [information classification](../../../documentation/informationClassification.md)
 - Pull request: pending
 - Agent runs: 2026-07-28 — Codex, refinement role, criteria 1–6, using
-  [`refine.md`](../prompt/003-handbookContentStructure/refine.md); result recorded
+  [refinement prompt](../prompt/003-handbookContentStructure.md); result recorded
   in this requirement.
 
 ## Change history

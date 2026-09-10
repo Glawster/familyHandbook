@@ -118,7 +118,7 @@ storage, sharing, backup and disposal without guaranteeing a storage method.
 - Documentation: [information classification](../../../documentation/informationClassification.md), [privacy and security](../../../documentation/privacyAndSecurity.md)
 - Pull request: pending
 - Agent runs: 2026-07-28 — Codex, refinement role, criteria 1–4, using
-  [`refine.md`](../prompt/002-privacyAndSecurityModel/refine.md); result recorded
+  [refinement prompt](../prompt/002-privacyAndSecurityModel.md); result recorded
   in this requirement and accepted ADR-0011, which supersedes ADR-0010.
 
 ## Change history

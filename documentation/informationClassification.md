@@ -69,6 +69,14 @@ The handbook may record that a separate authorised access arrangement exists
 and give a safe, proportionate reference to it. Never include these values in
 public templates, fictional examples, logs, exports or tests.
 
+The shared knowledge model distinguishes classification from prohibition. Some
+future knowledge may legitimately be Highly Confidential and may be retained
+only by a storage adapter that explicitly provides the required protection and
+by export policies that fail closed. Credentials, authentication material,
+security answers, recovery/one-time codes and complete payment-card numbers are
+prohibited regardless of storage capability. The current handbook and YAML
+capture adapter do not store Highly Confidential values.
+
 ## Section labels
 
 Until a canonical machine-readable handbook format is chosen, section authors

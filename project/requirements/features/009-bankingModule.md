@@ -1181,15 +1181,15 @@ workflow event must record the guidance ID and version/effective date it used.
 
 ## Traceability
 
-- Implementation: pending
-- Tests: pending
+- Implementation: shared Phase 1 kernel, dependency graph and typed capture input adapter; domain aggregate and workflows pending
+- Tests: shared-kernel, storage, security, graph and capture-adapter conformance tests implemented; domain acceptance tests pending
 - Documentation: [product vision](../../../documentation/productVision.md),
   [principles](../../../documentation/principles.md),
   [domain model](../../../documentation/domainModel.md),
   [glossary](../../../documentation/glossary.md),
   [information classification](../../../documentation/informationClassification.md),
   [privacy and security](../../../documentation/privacyAndSecurity.md),
-  [banking guidance](../../../documentation/banking/README.md),
+  [banking guidance](../../../documentation/banking/bankingIndex.md),
   [Money and Pensions handbook chapter](../../../handbook/05-MoneyAndPensions.md)
 - Principles: [P-001, P-002, P-003, P-004, P-005, P-007, P-008, P-009 and
   P-010](../../../documentation/principles.md)

@@ -1,3 +1,8 @@
+filelock>=3.12,<4
 PyYAML>=6.0,<7
 windows-curses>=2.4; platform_system == "Windows"
 pywin32; platform_system == "Windows"
+
+# OMP-MANAGED-BEGIN
+# Production dependencies belong to the project. OMP does not add any.
+# OMP-MANAGED-END

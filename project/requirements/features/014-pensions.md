@@ -150,8 +150,8 @@ and links to Employer, Banking, Insurance, Taxation, Authority and evidence.
   [005](../../adr/005-informationClassification.md), [006](../../adr/006-sharedDomainModel.md),
   [007](../../adr/007-knowledgeBeforeDocuments.md), [011](../../adr/011-platformPrivateDataRoot.md).
 - Principles: [P-001, P-002, P-004, P-005, P-007, P-009 and P-010](../../../documentation/principles.md).
-- Implementation: pending
-- Tests: pending
+- Implementation: shared Phase 1 kernel, dependency graph and typed capture input adapter; domain aggregate and workflows pending
+- Tests: shared-kernel, storage, security, graph and capture-adapter conformance tests implemented; domain acceptance tests pending
 - Documentation: pending
 - Pull request: pending
 - Agent runs: 2026-07-31 - Codex, initial domain specification.

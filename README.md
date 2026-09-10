@@ -5,30 +5,35 @@ information a family may need during an emergency, serious illness, loss of
 capacity or death.
 
 The repository is at an early, content-first stage. It contains a draft
-handbook outline, project requirements and a working command-line prototype for
-creating private Clann records and capturing structured continuity information.
+handbook outline, project requirements, an implemented UI-independent shared
+knowledge kernel and a working command-line prototype for creating private
+Clann records and capturing structured continuity information.
 It does not yet contain a web or desktop application. The handbook is intended
 to remain useful as human-readable and printable documents without software.
 
 ## Documentation
 
-- [Repository layout](.github/repositoryLayout.md)
-- [Requirements management](.github/requirementsManagement.md)
+- [Repository layout](documentation/repositoryLayout.md)
+- [Requirements management](documentation/requirementsManagement.md)
+- [Testing process](documentation/testingProcess.md)
+- [Release process](documentation/howToRelease.md)
 - [Product vision](documentation/productVision.md)
 - [Project principles](documentation/principles.md)
 - [Design principles](documentation/designPrinciples.md)
-- [Personas](documentation/personas/README.md)
+- [Personas](documentation/personas/personasIndex.md)
 - [Glossary](documentation/glossary.md)
 - [Information classification](documentation/informationClassification.md)
 - [Privacy and security](documentation/privacyAndSecurity.md)
 - [Domain model](documentation/domainModel.md)
-- [Banking guidance](documentation/banking/README.md)
+- [Financial domain implementation plan](project/financialDomainImplementationPlan.md)
+- [Architecture decisions](project/adr/adrIndex.md)
+- [Banking guidance](documentation/banking/bankingIndex.md)
 - [Clann bootstrap wizard](documentation/clannBootstrap.md)
-- [Project planning and governance](project/README.md)
-- [Requirements workflow](project/requirements/README.md)
+- [Project planning and governance](project/projectIndex.md)
+- [Requirements workflow](project/requirements/requirementsIndex.md)
 - [Repository assessment](project/reviews/repositoryAssessment.md)
 - [Change log](documentation/changeLog.md)
-- [Brand assets and guidance](brand/README.md)
+- [Brand assets and guidance](brand/brandIndex.md)
 - [Handbook outline](handbook/01-GettingStarted.md)
 
 ## Publishing website assets
@@ -97,8 +102,10 @@ conda activate handbook
 python -m pip install -e .
 ```
 
-The installed `eolas` command can create a Clann and capture structured records
-for requirements 009 through 018. Capture commands preview changes unless
+The installed `eolas` command can create a Clann and capture prototype input
+records for requirements 009 through 018. Capture now uses shared typed identity
+and validation, but it is not a complete implementation of those domains.
+Capture commands preview changes unless
 `--confirm` is supplied:
 
 ```bash
@@ -108,3 +115,14 @@ eolas capture
 
 See the [Clann bootstrap and capture guide](documentation/clannBootstrap.md)
 for the private-data layout and capture workflow.
+
+## Testing
+
+Run the complete test suite from the repository root:
+
+```bash
+pytest
+```
+
+See the [testing process](documentation/testingProcess.md) for the required
+unit, integration and production-path evidence.

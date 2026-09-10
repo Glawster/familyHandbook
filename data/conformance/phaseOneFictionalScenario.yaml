@@ -1,0 +1,88 @@
+fixture: eolas/phaseOneConformance/v1
+fictional: true
+warning: No identifier in this file is real, routable, or usable for authentication.
+clann:
+  id: clann-fictional-morgan
+  name: Morgan Example Clann
+households:
+  - id: fixture-household-north
+    name: North Example Home
+  - id: fixture-household-south
+    name: South Example Home
+people:
+  - id: fixture-person-morgan
+    name: Morgan Example
+    householdRef: fixture-household-north
+  - id: fixture-person-riley
+    name: Riley Example
+    householdRef: fixture-household-south
+organisations:
+  - id: fixture-org-financial
+    legalName: Example Mutual Finance (Fictional)
+  - id: fixture-org-pension
+    legalName: Example Pensions Cooperative (Fictional)
+  - id: fixture-org-energy
+    legalName: Example Community Energy (Fictional)
+organisationRoles:
+  - organisationRef: fixture-org-financial
+    role: fictionalAccountProvider
+    ownerModule: fixtureOnly
+authority:
+  id: fixture-authority-riley-for-morgan
+  actorRef: fixture-person-riley
+  grantorRef: fixture-person-morgan
+  scope: [manageHouseholdPayments]
+  state: active
+  registrationState: pending
+accountLikeRelationship:
+  id: fixture-account-household
+  ownerModule: fixtureOnly
+  maskedReference: "FICTIONAL-••42"
+  fullReference: absent
+income:
+  id: fixture-income-pension
+  providerRef: fixture-org-pension
+obligation:
+  id: fixture-obligation-electricity
+  providerRef: fixture-org-energy
+  essential: true
+paymentRelationship:
+  id: fixture-payment-electricity
+  accountRef: fixture-account-household
+events:
+  - id: fixture-event-morgan-death
+    type: death
+    subjectRef: fixture-person-morgan
+    occurredOn: 2026-08-15
+    affectedRecords:
+      - fixture-income-pension
+      - fixture-account-household
+      - fixture-obligation-electricity
+    requiredReviews:
+      - verifyRepresentativeAuthority
+      - preserveEssentialElectricity
+      - reviewIncomeAndPaymentDependencies
+evidence:
+  - id: fixture-evidence-pension-letter
+    locator: evidence://immutable/fictional-pension-letter
+    checksumSha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  - id: fixture-evidence-energy-notice
+    locator: evidence://immutable/fictional-energy-notice
+    checksumSha256: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+dependencies:
+  - source: fixture-income-pension
+    type: paidInto
+    target: fixture-account-household
+    explanation: Fictional pension income is paid into the household account.
+  - source: fixture-account-household
+    type: funds
+    target: fixture-payment-electricity
+    explanation: The household account funds the electricity payment.
+  - source: fixture-payment-electricity
+    type: pays
+    target: fixture-obligation-electricity
+    explanation: The payment relationship services the electricity obligation.
+  - source: fixture-obligation-electricity
+    type: supports
+    target: fixture-household-north
+    explanation: Electricity is an essential service for the North Example Home.
