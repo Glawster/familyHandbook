@@ -37,3 +37,4 @@ valid, but presentation must not become the source of truth.
 - [009: Markdown as the canonical handbook source](009-markdownHandbookSource.md)
 - [010: Private Clann data location](010-privateClannDataLocation.md) — superseded by ADR-0011
 - [011: Platform-resolved private data root](011-platformPrivateDataRoot.md)
+- [012: Local-first encrypted Clann sharing and synchronisation](012-secureClannSharingAndSync.md) — proposed
