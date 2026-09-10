@@ -146,7 +146,7 @@ All names, account identifiers and documents must be fictitious.
 
 ---
 
-# 10. Test execution record
+## 10. Test execution record
 
 For each test record:
 
@@ -164,7 +164,7 @@ For each test record:
 
 ---
 
-# 11. Test cases
+## 11. Test cases
 
 ## A. Installation, launch and application lifecycle
 
@@ -894,7 +894,7 @@ Minimum release smoke path:
 
 ---
 
-# 12. Exploratory test charters
+## 12. Exploratory test charters
 
 In addition to scripted cases, assign exploratory sessions.
 
@@ -918,7 +918,7 @@ Deliberately press the wrong controls, enter invalid values, cancel actions and 
 
 ---
 
-# 13. Defect severity
+## 13. Defect severity
 
 | Severity | Definition |
 |---|---|
@@ -929,7 +929,7 @@ Deliberately press the wrong controls, enter invalid values, cancel actions and 
 
 Severity is about user impact, not how difficult the defect is to fix.
 
-# 14. Defect report template
+## 14. Defect report template
 
 **Title:** `[Area] concise observed problem`
 
@@ -956,7 +956,7 @@ Severity is about user impact, not how difficult the defect is to fix.
 
 **Additional notes:**  
 
-# 15. Verification cycle summary
+## 15. Verification cycle summary
 
 At the end of the cycle record:
 
@@ -986,7 +986,7 @@ Record:
 - defects accepted for release;
 - follow-up testing required.
 
-# 16. Release sign-off
+## 16. Release sign-off
 
 **Verification Lead:** ____________________  **Date:** __________
 
@@ -998,7 +998,7 @@ Record:
 
 ---
 
-# Appendix A – Release-specific test additions
+## Appendix A – Release-specific test additions
 
 Each release should add tests for:
 - new requirements;
@@ -1012,7 +1012,7 @@ Each release should add tests for:
 
 Permanent regression tests discovered during a release should be promoted into the main numbered test suite.
 
-# Appendix B – Verification-team working rules
+## Appendix B – Verification-team working rules
 
 - Never use live banking credentials or genuine authentication secrets.
 - Prefer synthetic data throughout.
