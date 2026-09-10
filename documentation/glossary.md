@@ -244,8 +244,8 @@ not missing and must not be treated as unknown.
 **Observation** — A value known as of a particular time with provenance and a
 confirmation or estimation status.
 
-**Obligation** — A responsibility owned by its domain module. Stopping its
-payment arrangement does not settle or cancel it.
+**Obligation** — What has to be paid or maintained. Stopping its payment
+arrangement does not settle or cancel it.
 
 **Banking relationship** — The real-world account relationship with an
 institution. It is not a statement, document or credential container.
@@ -253,8 +253,15 @@ institution. It is not a statement, document or credential container.
 **Financial institution** — The Banking-owned view of a provider, always linked
 to a shared Organisation rather than stored as free text.
 
-**Payment arrangement** — A future Banking-owned relationship describing how
-an obligation is paid. It is not part of Banking Core.
+**Money movement** — An expected recurring inflow or outflow linked to a
+banking relationship. It is not proof that a payment occurred.
+
+**Payment arrangement** — How an obligation is normally paid, such as a Direct
+Debit or standing order. It is not the bill and not a statement line.
+
+**Transaction observation** — Dated evidence that a movement occurred, for
+example a fictional statement amount as of a date. It is not the standing
+arrangement that caused it.
 
 **Provenance** — The source, time, actor and derivation context of knowledge.
 

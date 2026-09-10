@@ -125,7 +125,10 @@ Clann store at `shared/records.yaml`. If an owner name matches exactly one
 Clann `Person`, that person is reused; unknown names become `Contact` records.
 Existing institutions are reused when `institutionRef` is supplied, or when
 exactly one stored provider has that display name. Duplicate names require
-`ownerRefs` or `institutionRef` rather than silent matching. Other capture
+`ownerRefs` or `institutionRef` rather than silent matching. Optional payment
+fields such as `obligationPurpose`, `paymentMechanism`, `movementDirection`
+and `transactionAmount`/`transactionAsOf` create separate obligation,
+arrangement, movement and transaction-evidence records. Other capture
 domains still write one prototype YAML document per label. Run
 `eolas capture --help` to see the supported domain names. Missing mandatory
 fields are reported together so the input can be corrected in one pass.

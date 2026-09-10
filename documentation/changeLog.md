@@ -11,7 +11,10 @@
 - New Clann bootstrap allocates opaque `rec_` person and household IDs and
   persists `Person` aggregates to the shared store. Banking capture reuses
   existing people and institutions by stable reference or unique exact name.
-- Requirement 009 remains in progress; money movements, payment arrangements
+- Added `Obligation`, `PaymentArrangement`, `MoneyMovement` and
+  `TransactionObservation`, keeping the bill, the payment instruction, the
+  expected flow and statement evidence as separate records.
+- Requirement 009 remains in progress; statement import, payment processing
   and banking projections are not included.
 
 ## 2026-09-01

@@ -23,6 +23,7 @@ from eolas.domain.values import (
     RecordLifecycle,
     RecordReference,
     ReviewState,
+    Schedule,
     VerificationState,
 )
 
@@ -405,6 +406,29 @@ def reviewEncode(review: ReviewState) -> dict[str, Any]:
         "nextReview": factEncode(review.next_review, _dateEncode),
         "responsibleRole": factEncode(review.responsible_role, referenceEncode),
         "findings": list(review.findings),
+    }
+
+
+## schedule
+
+
+def scheduleDecode(raw: Mapping[str, Any]) -> Schedule:
+    """Decode a recurrence schedule without treating it as a payment."""
+    return Schedule(
+        str(raw["frequency"]),
+        factDecode(raw["nextOccurrence"], _dateDecode),
+        str(raw.get("variability", "fixed")),
+        raw.get("timingNote"),
+    )
+
+
+def scheduleEncode(schedule: Schedule) -> dict[str, Any]:
+    """Encode a recurrence schedule."""
+    return {
+        "frequency": schedule.frequency,
+        "nextOccurrence": factEncode(schedule.next_occurrence, _dateEncode),
+        "variability": schedule.variability,
+        "timingNote": schedule.timing_note,
     }
 
 

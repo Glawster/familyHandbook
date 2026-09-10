@@ -202,7 +202,7 @@ class FinancialInstitution:
     lifecycle: RecordLifecycle = RecordLifecycle()
 
     def __post_init__(self) -> None:
-        _bankingIdentityValidate(self.identity, INSTITUTION_AGGREGATE)
+        bankingIdentityValidate(self.identity, INSTITUTION_AGGREGATE)
         classificationResolve(self.classification)
         if self.organisation.record_type != "organisation":
             raise DomainValidationError(
@@ -254,7 +254,7 @@ class BankingRelationship:
     lifecycle: RecordLifecycle = RecordLifecycle()
 
     def __post_init__(self) -> None:
-        _bankingIdentityValidate(self.identity, RELATIONSHIP_AGGREGATE)
+        bankingIdentityValidate(self.identity, RELATIONSHIP_AGGREGATE)
         classificationResolve(self.classification)
         if self.institution.record_type != INSTITUTION_AGGREGATE:
             raise DomainValidationError(
@@ -306,7 +306,7 @@ class BankingRelationship:
         )
 
 
-def _bankingIdentityValidate(identity: RecordIdentity, aggregate_type: str) -> None:
+def bankingIdentityValidate(identity: RecordIdentity, aggregate_type: str) -> None:
     if identity.owner_module != BANKING_MODULE:
         raise DomainValidationError("Banking aggregates must be owned by banking.")
     if identity.aggregate_type != aggregate_type:

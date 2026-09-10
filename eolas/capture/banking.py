@@ -6,6 +6,24 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from eolas.banking.codec import institutionEncode, relationshipEncode
+from eolas.banking.payments import (
+    ARRANGEMENT_AGGREGATE,
+    MOVEMENT_AGGREGATE,
+    OBLIGATION_AGGREGATE,
+    TRANSACTION_AGGREGATE,
+    MoneyMovement,
+    MovementDirection,
+    Obligation,
+    PaymentArrangement,
+    TransactionObservation,
+)
+from eolas.banking.paymentsCodec import (
+    arrangementDecode,
+    arrangementEncode,
+    movementEncode,
+    obligationEncode,
+    transactionEncode,
+)
 from eolas.banking.identifiers import identifierBankingCreate
 from eolas.banking.models import (
     BANKING_MODULE,
@@ -58,6 +76,7 @@ from eolas.domain.values import (
     RecordIdentity,
     RecordReference,
     ReviewState,
+    Schedule,
 )
 
 STATUS_ALIASES = {
@@ -91,7 +110,10 @@ def bankingCaptureWrite(targetPath: Path, document: Mapping[str, Any]) -> Path:
     service = BankingService(store)
     operations = []
     pendingInstitutions: List[RecordIdentity] = []
+    pendingObligations: List[RecordIdentity] = []
+    pendingRelationships: List[RecordIdentity] = []
     relationship: Optional[BankingRelationship] = None
+    arrangement = None
     for raw in document["operations"]:
         identity = RecordIdentity(
             raw["identity"]["recordId"],
@@ -109,13 +131,24 @@ def bankingCaptureWrite(targetPath: Path, document: Mapping[str, Any]) -> Path:
         operations.append(WriteOperation(record, None))
         if identity.aggregate_type == INSTITUTION_AGGREGATE:
             pendingInstitutions.append(identity)
+        if identity.aggregate_type == OBLIGATION_AGGREGATE:
+            pendingObligations.append(identity)
         if identity.aggregate_type == RELATIONSHIP_AGGREGATE:
             relationship = relationshipBuild(_relationshipCommandFromRecord(record))
+            pendingRelationships.append(identity)
+        if identity.aggregate_type == ARRANGEMENT_AGGREGATE:
+            arrangement = arrangementDecode(record)
     if relationship is None:
         raise DomainValidationError("Banking capture is missing a relationship.")
     service.relationshipValidate(
         relationship, pending_institutions=tuple(pendingInstitutions)
     )
+    if arrangement is not None:
+        service.arrangementValidate(
+            arrangement,
+            pending_obligations=tuple(pendingObligations),
+            pending_relationships=tuple(pendingRelationships),
+        )
     store.recordsCommit(operations)
     return targetPath
 
@@ -179,11 +212,28 @@ def bankingRecordsBuild(
             _balancesBuild(fields, provenance),
         )
     )
+    obligation, arrangement, movement, transaction = _paymentsBuild(
+        fields,
+        clann_id,
+        relationship,
+        classification,
+        provenance,
+        ReviewState(
+            review.last_reviewed,
+            review.next_review,
+            review.responsible_role,
+            tuple(findings),
+        ),
+    )
     return {
         "organisation": organisation,
         "contacts": tuple(contacts),
         "institution": institution,
         "relationship": relationship,
+        "obligation": obligation,
+        "arrangement": arrangement,
+        "movement": movement,
+        "transaction": transaction,
         "newOrganisation": newOrganisation,
         "newInstitution": newInstitution,
         "classification": classification,
@@ -208,6 +258,14 @@ def bankingDocumentBuild(
     if built.get("newInstitution"):
         operations.append(_operationEncode(institutionEncode(institution)))
     operations.append(_operationEncode(relationshipEncode(relationship)))
+    if built.get("obligation") is not None:
+        operations.append(_operationEncode(obligationEncode(built["obligation"])))
+    if built.get("arrangement") is not None:
+        operations.append(_operationEncode(arrangementEncode(built["arrangement"])))
+    if built.get("movement") is not None:
+        operations.append(_operationEncode(movementEncode(built["movement"])))
+    if built.get("transaction") is not None:
+        operations.append(_operationEncode(transactionEncode(built["transaction"])))
     return {
         "schema": "eolas/bankingRelationship/v1",
         "schemaVersion": 1,
@@ -235,6 +293,28 @@ def bankingDocumentBuild(
             "continuityRoles": [role.role_id for role in relationship.continuity_roles],
             "identifierCount": len(relationship.identifiers),
             "balanceCount": len(relationship.balances),
+        },
+        "payments": {
+            "obligationId": (
+                None
+                if built.get("obligation") is None
+                else built["obligation"].identity.record_id
+            ),
+            "arrangementId": (
+                None
+                if built.get("arrangement") is None
+                else built["arrangement"].identity.record_id
+            ),
+            "movementId": (
+                None
+                if built.get("movement") is None
+                else built["movement"].identity.record_id
+            ),
+            "transactionId": (
+                None
+                if built.get("transaction") is None
+                else built["transaction"].identity.record_id
+            ),
         },
         "operations": operations,
         "metadata": {
@@ -339,6 +419,153 @@ def _ownershipType(fields: Mapping[str, Any], parties: Sequence[AccountParty]) -
     if len(holders) == 1:
         return "sole"
     return "unknown"
+
+
+def _paymentsBuild(
+    fields: Mapping[str, Any],
+    clann_id: str,
+    relationship: BankingRelationship,
+    classification: Classification,
+    provenance: Provenance,
+    review: ReviewState,
+) -> tuple[
+    Optional[Obligation],
+    Optional[PaymentArrangement],
+    Optional[MoneyMovement],
+    Optional[TransactionObservation],
+]:
+    mechanism = fields.get("paymentMechanism")
+    directionRaw = fields.get("movementDirection")
+    obligationPurpose = fields.get("obligationPurpose") or (
+        relationship.purpose if mechanism not in (None, "", "unknown") else None
+    )
+    obligation = None
+    arrangement = None
+    movement = None
+    if obligationPurpose not in (None, "", "unknown") or mechanism not in (
+        None,
+        "",
+        "unknown",
+    ):
+        purpose = str(obligationPurpose or relationship.purpose)
+        obligation = Obligation(
+            RecordIdentity.identityCreate(
+                clann_id, OBLIGATION_AGGREGATE, BANKING_MODULE
+            ),
+            purpose,
+            classification,
+            provenance,
+            review,
+            Fact(FactState.UNKNOWN),
+            str(fields.get("obligationEssentiality", "unknown")),
+        )
+    if mechanism not in (None, "", "unknown"):
+        if obligation is None:
+            raise DomainValidationError("A payment arrangement requires an obligation.")
+        schedule = Schedule(
+            str(fields.get("paymentFrequency") or "unknown"),
+            Fact(FactState.UNKNOWN),
+            str(fields.get("paymentVariability") or "fixed"),
+        )
+        arrangement = PaymentArrangement(
+            RecordIdentity.identityCreate(
+                clann_id, ARRANGEMENT_AGGREGATE, BANKING_MODULE
+            ),
+            str(mechanism),
+            str(fields.get("paymentPurpose") or obligation.purpose),
+            obligation.identity.referenceCreate(),
+            relationship.identity.referenceCreate(),
+            classification,
+            provenance,
+            review,
+            schedule,
+        )
+        movement = MoneyMovement(
+            RecordIdentity.identityCreate(clann_id, MOVEMENT_AGGREGATE, BANKING_MODULE),
+            MovementDirection.OUTFLOW,
+            arrangement.purpose,
+            relationship.identity.referenceCreate(),
+            classification,
+            provenance,
+            review,
+            schedule,
+            Fact(FactState.UNKNOWN),
+            Fact(FactState.UNKNOWN),
+            Fact.factKnown(obligation.identity.referenceCreate()),
+            Fact.factKnown(arrangement.identity.referenceCreate()),
+        )
+    elif directionRaw not in (None, "", "unknown"):
+        schedule = Schedule(
+            str(fields.get("paymentFrequency") or "unknown"),
+            Fact(FactState.UNKNOWN),
+        )
+        movement = MoneyMovement(
+            RecordIdentity.identityCreate(clann_id, MOVEMENT_AGGREGATE, BANKING_MODULE),
+            MovementDirection(str(directionRaw)),
+            str(fields.get("movementPurpose") or relationship.purpose),
+            relationship.identity.referenceCreate(),
+            classification,
+            provenance,
+            review,
+            schedule,
+            Fact(FactState.UNKNOWN),
+            Fact(FactState.UNKNOWN),
+            (
+                Fact.factKnown(obligation.identity.referenceCreate())
+                if obligation is not None
+                else Fact(FactState.UNKNOWN)
+            ),
+        )
+    transaction = _transactionBuild(
+        fields,
+        clann_id,
+        relationship,
+        classification,
+        provenance,
+        movement,
+        arrangement,
+    )
+    return obligation, arrangement, movement, transaction
+
+
+def _transactionBuild(
+    fields: Mapping[str, Any],
+    clann_id: str,
+    relationship: BankingRelationship,
+    classification: Classification,
+    provenance: Provenance,
+    movement: Optional[MoneyMovement],
+    arrangement: Optional[PaymentArrangement],
+) -> Optional[TransactionObservation]:
+    amount = fields.get("transactionAmount")
+    currency = fields.get("transactionCurrency")
+    asOf = fields.get("transactionAsOf")
+    if amount in (None, "", "unknown") or currency in (None, "", "unknown"):
+        return None
+    if asOf in (None, "", "unknown"):
+        raise DomainValidationError("A transaction observation requires asOf.")
+    return TransactionObservation(
+        RecordIdentity.identityCreate(clann_id, TRANSACTION_AGGREGATE, BANKING_MODULE),
+        Observation(
+            Money(Decimal(str(amount)), str(currency)),
+            datetime.fromisoformat(str(asOf)),
+            provenance,
+        ),
+        relationship.identity.referenceCreate(),
+        classification,
+        provenance,
+        str(fields.get("transactionPurpose") or "statementEvidence"),
+        (
+            Fact.factKnown(movement.identity.referenceCreate())
+            if movement is not None
+            else Fact(FactState.UNKNOWN)
+        ),
+        (
+            Fact.factKnown(arrangement.identity.referenceCreate())
+            if arrangement is not None
+            else Fact(FactState.UNKNOWN)
+        ),
+    )
 
 
 def _booleanFlag(value: Any) -> bool:

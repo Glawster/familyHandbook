@@ -9,6 +9,13 @@ from eolas.banking.models import (
     BankingStatus,
     FinancialInstitution,
 )
+from eolas.banking.payments import (
+    MoneyMovement,
+    MovementDirection,
+    Obligation,
+    PaymentArrangement,
+    TransactionObservation,
+)
 from eolas.banking.service import (
     BankingService,
     InstitutionCreateCommand,
@@ -27,7 +34,12 @@ __all__ = [
     "BankingStatus",
     "FinancialInstitution",
     "InstitutionCreateCommand",
+    "MoneyMovement",
+    "MovementDirection",
+    "Obligation",
+    "PaymentArrangement",
     "RelationshipCreateCommand",
+    "TransactionObservation",
     "institutionBuild",
     "relationshipBuild",
 ]

@@ -390,9 +390,8 @@ exception is recorded.
 `BalanceObservation` is a dated `Observation` of `Money` with `asOf`, source
 and purpose. A balance is never timeless account state.
 
-Money movements, payment arrangements, cards as instruments, statement parsing,
-Open Banking, executor/attorney workflows and banking reports are not part of
-this increment.
+Cards as instruments, statement parsing, Open Banking, executor/attorney
+workflows and banking reports remain later increments.
 
 CLI `eolas capture banking` still collects the existing mandatory fields, then
 the capture adapter creates typed Organisation, FinancialInstitution,
@@ -408,3 +407,19 @@ external name. Duplicate person names are not merged; the caller must supply
 `institutionRef` or `organisationRef` is supplied, or when exactly one stored
 provider matches the captured name. Duplicate provider names require an
 explicit reference. `createInstitution` forces a new provider.
+
+## Implemented money movements and payment arrangements
+
+Banking keeps four separate records:
+
+- `Obligation` — what has to be paid or maintained.
+- `PaymentArrangement` — how that obligation is normally paid.
+- `MoneyMovement` — an expected recurring inflow or outflow.
+- `TransactionObservation` — dated evidence that a movement occurred.
+
+A Direct Debit or standing order is a `PaymentArrangement`, not the bill.
+Cancelling the arrangement leaves the obligation open. A salary credit is a
+`MoneyMovement` and does not require an arrangement. A statement amount is a
+`TransactionObservation` with `asOf`; it does not become the standing
+instruction. Full ledgers, statement parsing, Open Banking and cancellation
+workflows are still out of scope.

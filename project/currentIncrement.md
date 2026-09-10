@@ -2,7 +2,7 @@
 
 ## Increment
 
-Banking Core identity cleanup.
+Money Movements and Payment Arrangements.
 
 ## Branch
 
@@ -10,39 +10,41 @@ Banking Core identity cleanup.
 
 ## Objective
 
-Reuse canonical shared-domain identities during Banking capture: Clann people
-instead of duplicate Contacts, and existing Organisation/FinancialInstitution
-records instead of a new provider per relationship.
+Represent how money is expected to move, and how obligations are paid, without
+collapsing the bill, the payment instruction, the expected flow and statement
+evidence into one record.
 
 ## Scope
 
-- New Clann bootstrap allocates opaque `rec_` IDs for people and households.
-- Bootstrap persists `Person` aggregates to the Clann `RecordStore`.
-- Legacy prototype slug IDs remain readable; they are not allocated to new
-  records.
-- Banking capture resolves `ownerRefs` and unique exact person names to
-  existing `Person` records.
-- Unresolved owner names may still create a `Contact`.
-- Duplicate person or institution names require explicit references.
-- `institutionRef` / `organisationRef` reuse existing providers.
-- Unique exact institution names reuse a stored provider.
-- `createInstitution` forces a new provider.
+- `Obligation` — what has to be paid or maintained.
+- `PaymentArrangement` — Direct Debit, standing order and related instructions.
+- `MoneyMovement` — expected inflow or outflow.
+- `TransactionObservation` — dated evidence that a movement occurred.
+- Cancelling an arrangement does not end the obligation.
+- Optional banking capture fields can create these typed records.
+- Persistence through the shared `RecordStore` port.
 
 ## Explicit exclusion
 
-Do not implement money movements, payment arrangements, fuzzy matching,
-automatic institution directories, or destructive identity migration.
+Do not implement:
+
+- full transaction history or a ledger;
+- Direct Debit or standing-order processing and cancellation workflows;
+- bank-statement parsing, OCR or Open Banking;
+- payment instruments, banking reports or executor/attorney workflows;
+- the full continuity dependency graph.
 
 ## Expected exit criteria
 
-- Capture tests prove Person reuse, joint owners, Contact-only-for-unknown,
-  duplicate-name rejection, institution reuse, explicit refs winning over
-  names, and no duplicate Organisation on reuse.
-- New bootstrap people use opaque IDs; legacy slug IDs still construct.
+- Tests prove the four-record boundary, distinct mechanisms, salary inflow
+  without an arrangement, transaction evidence that does not mutate an
+  arrangement, persistence, conflicts, secrets rejection, Clann isolation and
+  capture.
+- Requirement 009 remains in progress.
 - `pytest` passes.
 - `manageProject --check` reports zero failures and zero warnings.
 
 ## Immediate next action
 
-Money Movements and Payment Arrangements, keeping payment instructions separate
-from the underlying obligation.
+Keep Banking Core on this branch until maintainers merge it, or continue with
+statement-import candidates and dependency edges as a later increment.

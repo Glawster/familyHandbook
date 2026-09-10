@@ -21,6 +21,23 @@ from eolas.banking.models import (
     BankingStatus,
     FinancialInstitution,
 )
+from eolas.banking.payments import (
+    OBLIGATION_AGGREGATE,
+    MoneyMovement,
+    Obligation,
+    PaymentArrangement,
+    TransactionObservation,
+)
+from eolas.banking.paymentsCodec import (
+    arrangementDecode,
+    arrangementEncode,
+    movementDecode,
+    movementEncode,
+    obligationDecode,
+    obligationEncode,
+    transactionDecode,
+    transactionEncode,
+)
 from eolas.banking.roles import PRIMARY_OPERATING_ROLE
 from eolas.domain.storage import RecordStore, WriteOperation
 from eolas.domain.values import (
@@ -158,7 +175,152 @@ class BankingService:
         )[0]
         return relationshipDecode(committed)
 
+    ## obligation
+
+    def obligationCreate(self, obligation: Obligation) -> Obligation:
+        """Persist a new Obligation."""
+        return obligationDecode(self._recordCreate(obligationEncode(obligation)))
+
+    def obligationGet(self, identity: RecordIdentity) -> Obligation:
+        """Load an Obligation by opaque identity."""
+        return obligationDecode(self.store.recordGet(identity))
+
+    ## arrangement
+
+    def arrangementCreate(
+        self,
+        arrangement: PaymentArrangement,
+        *,
+        pending_obligations: Tuple[RecordIdentity, ...] = (),
+        pending_relationships: Tuple[RecordIdentity, ...] = (),
+    ) -> PaymentArrangement:
+        """Persist a new PaymentArrangement after reference checks."""
+        self.arrangementValidate(
+            arrangement,
+            pending_obligations=pending_obligations,
+            pending_relationships=pending_relationships,
+        )
+        return arrangementDecode(self._recordCreate(arrangementEncode(arrangement)))
+
+    def arrangementGet(self, identity: RecordIdentity) -> PaymentArrangement:
+        """Load a PaymentArrangement by opaque identity."""
+        return arrangementDecode(self.store.recordGet(identity))
+
+    def arrangementRevise(
+        self, arrangement: PaymentArrangement, expected_version: int
+    ) -> PaymentArrangement:
+        """Replace an arrangement using expected-version checking."""
+        self.arrangementValidate(arrangement)
+        committed = self.store.recordsCommit(
+            (WriteOperation(arrangementEncode(arrangement), expected_version),)
+        )[0]
+        return arrangementDecode(committed)
+
+    def arrangementValidate(
+        self,
+        arrangement: PaymentArrangement,
+        *,
+        pending_obligations: Tuple[RecordIdentity, ...] = (),
+        pending_relationships: Tuple[RecordIdentity, ...] = (),
+    ) -> None:
+        """Require a real obligation and funding account, not an instruction."""
+        pendingObligationIds = {item.record_id for item in pending_obligations}
+        pendingRelationshipIds = {item.record_id for item in pending_relationships}
+        if arrangement.obligation.record_id not in pendingObligationIds:
+            try:
+                self.obligationGet(
+                    RecordIdentity(
+                        arrangement.obligation.record_id,
+                        arrangement.identity.clann_id,
+                        OBLIGATION_AGGREGATE,
+                        BANKING_MODULE,
+                    )
+                )
+            except KeyError as error:
+                raise DomainValidationError(
+                    "PaymentArrangement requires a persisted Obligation."
+                ) from error
+        if arrangement.funding_account.record_id not in pendingRelationshipIds:
+            try:
+                self.relationshipGet(
+                    RecordIdentity(
+                        arrangement.funding_account.record_id,
+                        arrangement.identity.clann_id,
+                        RELATIONSHIP_AGGREGATE,
+                        BANKING_MODULE,
+                    )
+                )
+            except KeyError as error:
+                raise DomainValidationError(
+                    "PaymentArrangement requires a persisted BankingRelationship."
+                ) from error
+
+    ## movement
+
+    def movementCreate(
+        self,
+        movement: MoneyMovement,
+        *,
+        pending_relationships: Tuple[RecordIdentity, ...] = (),
+    ) -> MoneyMovement:
+        """Persist a new expected MoneyMovement."""
+        if movement.account.record_id not in {
+            item.record_id for item in pending_relationships
+        }:
+            try:
+                self.relationshipGet(
+                    RecordIdentity(
+                        movement.account.record_id,
+                        movement.identity.clann_id,
+                        RELATIONSHIP_AGGREGATE,
+                        BANKING_MODULE,
+                    )
+                )
+            except KeyError as error:
+                raise DomainValidationError(
+                    "MoneyMovement requires a persisted BankingRelationship."
+                ) from error
+        return movementDecode(self._recordCreate(movementEncode(movement)))
+
+    def movementGet(self, identity: RecordIdentity) -> MoneyMovement:
+        """Load a MoneyMovement by opaque identity."""
+        return movementDecode(self.store.recordGet(identity))
+
+    ## transaction
+
+    def transactionCreate(
+        self,
+        transaction: TransactionObservation,
+        *,
+        pending_relationships: Tuple[RecordIdentity, ...] = (),
+    ) -> TransactionObservation:
+        """Persist dated transaction evidence without changing arrangements."""
+        if transaction.account.record_id not in {
+            item.record_id for item in pending_relationships
+        }:
+            try:
+                self.relationshipGet(
+                    RecordIdentity(
+                        transaction.account.record_id,
+                        transaction.identity.clann_id,
+                        RELATIONSHIP_AGGREGATE,
+                        BANKING_MODULE,
+                    )
+                )
+            except KeyError as error:
+                raise DomainValidationError(
+                    "TransactionObservation requires a persisted BankingRelationship."
+                ) from error
+        return transactionDecode(self._recordCreate(transactionEncode(transaction)))
+
+    def transactionGet(self, identity: RecordIdentity) -> TransactionObservation:
+        """Load a TransactionObservation by opaque identity."""
+        return transactionDecode(self.store.recordGet(identity))
+
     ## utilities
+
+    def _recordCreate(self, record):
+        return self.store.recordsCommit((WriteOperation(record, None),))[0]
 
     def _operatingRoleValidate(
         self,
