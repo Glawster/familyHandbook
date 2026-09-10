@@ -102,9 +102,10 @@ conda activate handbook
 python -m pip install -e .
 ```
 
-The installed `eolas` command can create a Clann and capture prototype input
-records for requirements 009 through 018. Capture now uses shared typed identity
-and validation, but it is not a complete implementation of those domains.
+The installed `eolas` command can create a Clann and capture structured input
+for requirements 009 through 018. Banking capture creates typed
+`FinancialInstitution` and `BankingRelationship` records. Other domains still
+use the shared prototype input adapter and are not complete implementations.
 Capture commands preview changes unless
 `--confirm` is supplied:
 

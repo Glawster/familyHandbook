@@ -2,52 +2,60 @@
 
 ## Increment
 
-Shared Domain Foundation, Phases 0 and 1.
+Banking Core.
 
 ## Branch
 
-`feature/shared-domain-foundation`
+`feature/banking-core`
 
 ## Objective
 
-Complete the Phase 0 architecture decisions and Phase 1 shared knowledge kernel
-described by the
-[financial domain implementation plan](financialDomainImplementationPlan.md).
+Implement the first Banking domain slice on the shared knowledge kernel so a
+real banking relationship can be represented without loose capture dictionaries
+or document-shaped data.
 
 ## Scope
 
-- Establish the architecture boundaries and decisions needed by requirements
-  [008 through 018](requirements/requirementsIndex.md).
-- Implement the shared identity, ownership, classification, provenance,
-  evidence, authority, temporal-value and persistence foundations.
-- Provide the shared continuity-dependency graph contract required by later
-  domain modules, without adding Banking-owned semantics.
-- Keep the kernel independent of user-interface, network and Banking concerns.
+- `FinancialInstitution` linked to shared `Organisation`.
+- `BankingRelationship` as the real-world relationship aggregate.
+- `AccountParty` ownership and interest, distinct from authority and access.
+- Versioned `AccountContinuityRole` registry.
+- Typed banking identifiers with masking, provenance and prohibited-secret
+  rejection.
+- `BalanceObservation` as a dated `Observation` of `Money`.
+- Lifecycle/status, provenance, classification and review state using shared
+  types.
+- Persistence through the shared `RecordStore` port.
+- CLI/curses `eolas capture banking` creating typed Banking records.
 
 ## Explicit exclusion
 
-Phase 2 Banking implementation is outside this increment. No Banking
-aggregates, Banking edge semantics or Banking workflows are included.
+Do not implement in this increment:
+
+- money movements and payment arrangements;
+- transaction history, Direct Debits, standing orders or cancellation;
+- bank-statement parsing, OCR or Open Banking;
+- automatic institution lookup;
+- executor or attorney banking workflows;
+- banking reports;
+- the full continuity dependency graph for Banking;
+- cloud synchronisation or production encryption/key-management changes.
 
 ## Expected exit criteria
 
-- Phase 0 decisions are recorded in accepted ADRs and linked from the source
-  plan.
-- Phase 1 shared-kernel contracts are implemented in the project package with
-  no dependency on UI frameworks or network services.
-- Automated tests cover identity and Clann isolation, fact states,
-  classification, prohibited secrets, provenance and evidence, temporal money,
-  authority, graph traversal, persistence history, optimistic concurrency,
-  atomic changes and migration.
-- The fictional conformance fixture demonstrates multiple households and a
-  cross-domain dependency chain without introducing Banking implementation.
-- The [domain conformance checklist](domainConformanceChecklist.md) traces the
-  shared foundation to requirements 008–018 and keeps later domain work
-  explicitly deferred.
+- Domain tests cover institution and relationship creation, opaque IDs, Clann
+  isolation, joint ownership, non-owner authority references, continuity roles,
+  identifiers, balances, provenance, classification, review, persistence and
+  version conflicts.
+- Capture/CLI adapter creates typed Banking records and existing non-banking
+  capture continues to work.
+- Tests use conspicuously fictional institutions and identifiers and require
+  no network.
+- Requirement 009 is updated but not marked completed.
 - `pytest` passes.
 - `manageProject --check` reports zero failures and zero warnings.
 
 ## Immediate next action
 
-Complete the Phase 2 entry review in the domain conformance checklist, close
-this increment, and record any Banking work as a separate increment.
+Money Movements and Payment Arrangements, keeping payment instructions separate
+from the underlying obligation.

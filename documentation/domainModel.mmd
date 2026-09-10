@@ -4,6 +4,14 @@ flowchart TB
     Household --> Document
     Household --> Asset
     Household --> Account
+    Account --> BankingRelationship
+    BankingRelationship --> FinancialInstitution
+    FinancialInstitution --> Organisation
+    BankingRelationship --> AccountParty
+    BankingRelationship --> AccountContinuityRole
+    BankingRelationship --> BalanceObservation
+    BankingRelationship --> Authority
+    AccountParty --> Person
     Household --> Contact
     Household --> Instruction
     Household --> Wish

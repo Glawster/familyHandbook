@@ -21,7 +21,7 @@ implementation and must distinguish current behaviour from planned work.
 
 ## InProgress
 
-- [009 — Banking module](features/009-bankingModule.md) — shared Phase 1 kernel and CLI input adapter implemented; Banking aggregates, workflows and projections remain
+- [009 — Banking module](features/009-bankingModule.md) — Banking Core aggregates, identifiers, parties, roles, balances and typed capture implemented; money movements, payment arrangements, workflows and projections remain
 - [010 — Credit cards](features/010-creditCards.md) — shared Phase 1 kernel and CLI input adapter implemented; full domain workflows and projections remain
 - [011 — Mortgages](features/011-mortgages.md) — shared Phase 1 kernel and CLI input adapter implemented; full domain workflows and projections remain
 - [012 — Loans and other borrowing](features/012-loans.md) — shared Phase 1 kernel and CLI input adapter implemented; full domain workflows and projections remain

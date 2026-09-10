@@ -36,7 +36,7 @@ Phase 2 Banking implementation by itself.
 | Requirement | Shared Phase 0/1 obligation | Evidence | Deliberately deferred |
 | --- | --- | --- | --- |
 | [008: Document Import Framework](requirements/features/008-documentImportFramework.md) | Supply typed identity, classification, provenance, evidence-reference and atomic target-commit boundaries without allowing a plugin to own canonical facts. | ADRs 0012, 0013, 0016 and 0017; `eolas/domain/`; kernel conformance tests. | Ingestion, retained bytes, OCR, candidates, plugin runtime and import UI. |
-| [009: Banking](requirements/features/009-bankingModule.md) | Define reusable organisations, identifiers, authority, observations, continuity actions and dependency traversal without Banking semantics. | ADRs 0012–0017; fictional dependency fixture. | All Banking aggregates, edge semantics, workflows and projections. |
+| [009: Banking](requirements/features/009-bankingModule.md) | Define reusable organisations, identifiers, authority, observations, continuity actions and dependency traversal without Banking semantics. | ADRs 0012–0017; fictional dependency fixture; Banking Core in `eolas/banking/` and `tests/test_bankingCore.py`. | Money movements, payment arrangements, cards as instruments, reports, executor/attorney workflows, statement import and the full dependency graph. |
 | [010: Credit cards](requirements/features/010-creditCards.md) | Preserve the boundary between an external identifier, a future payment instrument and a module-owned liability. | Identity/ownership ADR and masked identifier tests. | Facilities, card instruments, balances and repayment workflows. |
 | [011: Mortgages](requirements/features/011-mortgages.md) | Provide dated money/evidence, party roles, authority and typed cross-module references. | Value, authority, evidence and graph tests. | Mortgage facilities, property security and repayment strategies. |
 | [012: Loans](requirements/features/012-loans.md) | Keep borrower/guarantor roles distinct from ownership and authority; retain dated evidence. | PartyRole, Authority and EvidenceReference contracts. | Loan, guarantee, security and settlement aggregates. |
@@ -51,9 +51,11 @@ Phase 2 Banking implementation by itself.
 
 Before Banking begins, maintainers should confirm that:
 
-- [ ] findings from the Phase 0/1 review are accepted as resolved;
-- [ ] no unresolved ADR changes the Banking ownership or transaction boundary;
-- [ ] Banking commands will use the shared identity, classification, authority,
+- [x] findings from the Phase 0/1 review are accepted as resolved;
+- [x] no unresolved ADR changes the Banking ownership or transaction boundary;
+- [x] Banking commands will use the shared identity, classification, authority,
   evidence, persistence and dependency contracts rather than duplicate them;
-- [ ] Banking acceptance tests are mapped to requirement 009; and
-- [ ] Phase 2 work is recorded as a separate increment.
+- [x] Banking Core tests are mapped to requirement 009; remaining 009
+  acceptance criteria (movements, payments, reports, workflows) stay deferred;
+  and
+- [x] Phase 2 work is recorded as a separate increment (`feature/banking-core`).

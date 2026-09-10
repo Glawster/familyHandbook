@@ -39,8 +39,10 @@ def _validFields(domain: str) -> Dict[str, Any]:
     return fields
 
 
-@pytest.mark.parametrize("domain", CAPTURE_PROFILES)
-def test_capturePrepare_supportsRequirements009Through018(
+@pytest.mark.parametrize(
+    "domain", [name for name in CAPTURE_PROFILES if name != "banking"]
+)
+def test_capturePrepare_supportsRequirements010Through018(
     clannPath: Path, domain: str
 ) -> None:
     capture = CaptureInput(
@@ -60,6 +62,24 @@ def test_capturePrepare_supportsRequirements009Through018(
         "state": "known",
         "value": "known",
     }
+
+
+def test_capturePrepare_bankingCreatesTypedRelationship(clannPath: Path) -> None:
+    fields = _validFields("banking")
+    fields["institution"] = "Northbridge Fictional Mutual"
+    fields["owners"] = "Morgan Example"
+    fields["status"] = "active"
+    capture = CaptureInput("banking", "Household bills", fields, "statement")
+
+    targetPath, document = capturePrepare(
+        capture, clannPath, timestampProvider=lambda: TEST_TIME
+    )
+
+    assert targetPath == clannPath / "shared" / "banking" / "store.yaml"
+    assert document["aggregateType"] == "bankingRelationship"
+    assert document["id"].startswith("rec_")
+    assert document["institution"]["displayName"] == "Northbridge Fictional Mutual"
+    assert document["relationship"]["ownershipType"] == "sole"
 
 
 def test_captureValidate_reportsAllMissingRequiredFields() -> None:
@@ -101,9 +121,25 @@ def test_captureValidate_allowsHarmlessSecretSubstrings(harmlessField: str) -> N
 def test_captureAdapter_preservesUnknownAndNotApplicable(
     clannPath: Path,
 ) -> None:
+    fields = _validFields("utilities")
+    fields["supplier"] = "unknown"
+    fields["utilityType"] = "notApplicable"
+
+    _target, document = capturePrepare(
+        CaptureInput("utilities", "Electricity", fields, "bill"),
+        clannPath,
+        timestampProvider=lambda: TEST_TIME,
+    )
+
+    assert document["data"]["supplier"] == {"state": "unknown"}
+    assert document["data"]["utilityType"] == {"state": "notApplicable"}
+
+
+def test_captureAdapter_bankingUnknownInstitutionIsAFinding(clannPath: Path) -> None:
     fields = _validFields("banking")
     fields["institution"] = "unknown"
-    fields["accountCategory"] = "notApplicable"
+    fields["owners"] = "unknown"
+    fields["status"] = "unknown"
 
     _target, document = capturePrepare(
         CaptureInput("banking", "Bills", fields, "statement"),
@@ -111,12 +147,15 @@ def test_captureAdapter_preservesUnknownAndNotApplicable(
         timestampProvider=lambda: TEST_TIME,
     )
 
-    assert document["data"]["institution"] == {"state": "unknown"}
-    assert document["data"]["accountCategory"] == {"state": "notApplicable"}
+    assert document["institution"]["organisationLegalName"] == "Bills"
+    assert document["relationship"]["ownershipType"] == "unknown"
+    assert document["relationship"]["status"] == "unknown"
 
 
 def test_captureWrite_isAtomicAndRefusesOverwrite(clannPath: Path) -> None:
-    capture = CaptureInput("banking", "Bills", _validFields("banking"), "statement")
+    capture = CaptureInput(
+        "utilities", "Electricity", _validFields("utilities"), "bill"
+    )
     targetPath, document = capturePrepare(
         capture, clannPath, timestampProvider=lambda: TEST_TIME
     )
@@ -128,7 +167,7 @@ def test_captureWrite_isAtomicAndRefusesOverwrite(clannPath: Path) -> None:
     loaded = yaml.safe_load(targetPath.read_text(encoding="utf-8"))
     assert loaded == document
     assert document["id"].startswith("rec_")
-    assert document["ownerModule"] == "banking"
+    assert document["ownerModule"] == "utilities"
     assert list(targetPath.parent.glob(".*.yaml")) == []
 
 
@@ -153,7 +192,7 @@ def test_cliCapture_previewsThenWritesOnlyWithConfirm(
         "--source",
         "2026 statement",
     ]
-    targetPath = clannPath / "shared/banking/household-bills.yaml"
+    targetPath = clannPath / "shared/banking/store.yaml"
 
     assert cliRun(arguments) == 0
     assert not targetPath.exists()
@@ -176,7 +215,7 @@ def test_cliCapture_usesCursesWhenInputIsOmitted(
     result = cliRun(["capture", "banking", "--clann", str(clannPath), "--confirm"])
 
     assert result == 0
-    assert (clannPath / "shared/banking/household-bills.yaml").is_file()
+    assert (clannPath / "shared/banking/store.yaml").is_file()
 
 
 def test_cliCapture_discoversOnlyClannForSimpleCommand(
@@ -199,7 +238,7 @@ def test_cliCapture_discoversOnlyClannForSimpleCommand(
     result = cliRun(["capture", "banking", "--confirm"])
 
     assert result == 0
-    assert (clannPath / "shared/banking/household-bills.yaml").is_file()
+    assert (clannPath / "shared/banking/store.yaml").is_file()
 
 
 def test_cliCapture_usesClannMenuWhenSeveralExist(
@@ -222,7 +261,7 @@ def test_cliCapture_usesClannMenuWhenSeveralExist(
     result = cliRun(["capture", "banking", "--confirm"])
 
     assert result == 0
-    assert (secondPath / "shared/banking/household-bills.yaml").is_file()
+    assert (secondPath / "shared/banking/store.yaml").is_file()
 
 
 def test_cliCapture_usesDomainMenuWhenDomainIsOmitted(
@@ -269,4 +308,4 @@ def test_cliCapture_interactiveConfirmationSavesWithoutFlags(
     monkeypatch.setattr("eolas.cli.confirmationCapture", lambda *_args, **_kwargs: True)
 
     assert cliRun(["capture"]) == 0
-    assert (clannPath / "shared/banking/bills.yaml").is_file()
+    assert (clannPath / "shared/banking/store.yaml").is_file()

@@ -247,8 +247,14 @@ confirmation or estimation status.
 **Obligation** — A responsibility owned by its domain module. Stopping its
 payment arrangement does not settle or cancel it.
 
+**Banking relationship** — The real-world account relationship with an
+institution. It is not a statement, document or credential container.
+
+**Financial institution** — The Banking-owned view of a provider, always linked
+to a shared Organisation rather than stored as free text.
+
 **Payment arrangement** — A future Banking-owned relationship describing how
-an obligation is paid. It is planned for Phase 2 and is not yet implemented.
+an obligation is paid. It is not part of Banking Core.
 
 **Provenance** — The source, time, actor and derivation context of knowledge.
 

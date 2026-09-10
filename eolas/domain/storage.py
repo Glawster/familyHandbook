@@ -56,6 +56,13 @@ class RecordStore(Protocol):
 
     def recordHistory(self, identity: RecordIdentity) -> Tuple[StoredRecord, ...]: ...
 
+    def recordsList(
+        self,
+        *,
+        aggregate_type: Optional[str] = None,
+        owner_module: Optional[str] = None,
+    ) -> Tuple[StoredRecord, ...]: ...
+
 
 Migration = Callable[[Mapping[str, Any]], Mapping[str, Any]]
 
@@ -107,6 +114,30 @@ class YamlRecordStore:
                 "Record history identity type or ownership does not match."
             )
         return history
+
+    def recordsList(
+        self,
+        *,
+        aggregate_type: Optional[str] = None,
+        owner_module: Optional[str] = None,
+    ) -> Tuple[StoredRecord, ...]:
+        """Return current records, optionally filtered by type or owner module."""
+        state = self._stateLoad()
+        records = []
+        for raw in state["records"].values():
+            record = self._recordDecode(raw)
+            if (
+                aggregate_type is not None
+                and record.identity.aggregate_type != aggregate_type
+            ):
+                continue
+            if (
+                owner_module is not None
+                and record.identity.owner_module != owner_module
+            ):
+                continue
+            records.append(record)
+        return tuple(records)
 
     def recordsCommit(
         self, operations: Iterable[WriteOperation]

@@ -1136,11 +1136,21 @@ The initial Banking module does not include:
 - [ADR-0008](../../adr/008-handbookAsProjection.md): reports are projections.
 - [ADR-0011](../../adr/011-platformPrivateDataRoot.md): platform-private local
   storage.
+- [ADR-0012](../../adr/012-sharedIdentityAndOwnership.md): opaque IDs and
+  aggregate ownership.
+- [ADR-0013](../../adr/013-persistenceHistoryAndTransactions.md): RecordStore
+  port, history and expected versions.
+- [ADR-0014](../../adr/014-partiesOrganisationsAndContacts.md): Organisation is
+  not free text.
+- [ADR-0015](../../adr/015-authorityAndProviderRecognition.md): authority is not
+  ownership or application access.
 
 ### Decisions still required
 
-- Approved banking entity and relationship extensions to the shared domain
-  model.
+- Banking Core has implemented `FinancialInstitution`, `BankingRelationship`,
+  `AccountParty`, continuity roles, typed identifiers and
+  `BalanceObservation` on the shared kernel. Remaining entity extensions
+  include money movements, payment arrangements and payment instruments.
 - Default classification and masking for each identifier and report.
 - Governance, review triggers and release process for jurisdiction guidance,
   including packages beyond the initial UK content.
@@ -1181,8 +1191,15 @@ workflow event must record the guidance ID and version/effective date it used.
 
 ## Traceability
 
-- Implementation: shared Phase 1 kernel, dependency graph and typed capture input adapter; domain aggregate and workflows pending
-- Tests: shared-kernel, storage, security, graph and capture-adapter conformance tests implemented; domain acceptance tests pending
+- Implementation: shared Phase 1 kernel; Banking Core in `eolas/banking/`
+  (`FinancialInstitution`, `BankingRelationship`, `AccountParty`, continuity
+  roles, typed identifiers, `BalanceObservation`); typed `eolas capture banking`
+  adapter; money movements, payment arrangements, workflows and projections
+  pending
+- Tests: shared-kernel tests plus `tests/test_bankingCore.py` for institution
+  and relationship creation, isolation, ownership, authority links, identifiers,
+  balances, persistence, conflicts and capture; remaining 009 acceptance
+  criteria pending
 - Documentation: [product vision](../../../documentation/productVision.md),
   [principles](../../../documentation/principles.md),
   [domain model](../../../documentation/domainModel.md),
@@ -1202,3 +1219,4 @@ workflow event must record the guidance ID and version/effective date it used.
 - 2026-07-31: created as the Banking module domain and continuity requirement.
 - 2026-07-31: separated mutable UK guidance, clarified credit-card ownership,
   and added typed continuity roles and bidirectional dependency graphs.
+- 2026-09-10: Banking Core implemented; requirement remains in progress.

@@ -111,9 +111,12 @@ eolas capture banking \
 
 The preview validates mandatory fields and shows the complete record without
 writing it. Add `--confirm` to create the record atomically under
-`shared/<domain>/`. Run `eolas capture --help` to see the supported
-domain names. Missing mandatory fields are reported together so the input can
-be corrected in one pass.
+`shared/<domain>/`. Banking capture writes typed
+`FinancialInstitution` and `BankingRelationship` records through the shared
+store at `shared/banking/store.yaml` rather than a loose per-label dictionary.
+Other capture domains still write one prototype YAML document per label. Run
+`eolas capture --help` to see the supported domain names. Missing mandatory
+fields are reported together so the input can be corrected in one pass.
 
 Every input needs the domain's required fields plus a valid `classification`
 and an ISO `lastReviewed` date. Unknown facts should be recorded explicitly as

@@ -668,14 +668,17 @@ A module is ready for UI or importer implementation only when:
 - Phase 0 decisions: [ADRs 0012–0017](adr/adrIndex.md)
 - Phase 0/1 review: [domain conformance checklist](domainConformanceChecklist.md)
 - Banking guidance: [guidance index](../documentation/banking/bankingIndex.md)
-- Implementation: Phase 0/1 shared kernel in `eolas/domain/`; typed capture
-  adapter in `eolas/capture/`; Phase 2 and Document Import remain pending
-- Tests: shared kernel, security, dependency graph, persistence and capture
-  adapter conformance in `tests/`
+- Implementation: Phase 0/1 shared kernel in `eolas/domain/`; Banking Core in
+  `eolas/banking/`; typed capture adapter in `eolas/capture/`; money movements,
+  payment arrangements and later phases remain pending
+- Tests: shared kernel, security, dependency graph, persistence, Banking Core
+  and capture adapter conformance in `tests/`
 - Pull request: pending
 
 ## Change history
 
+- 2026-09-10: recorded Banking Core as the first Phase 2 slice; money movements
+  and payment arrangements remain the next Banking increment.
 - 2026-09-01: recorded completion of Phase 0/1 foundations and the deliberate
   early delivery of the generic dependency graph; Banking remains Phase 2.
 
