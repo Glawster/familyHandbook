@@ -40,9 +40,7 @@ class ClannInput:
         if not self.name.strip():
             raise ClannValidationError("Clann name cannot be empty.")
         if not self.primary_household_name.strip():
-            raise ClannValidationError(
-                "Primary household name cannot be empty."
-            )
+            raise ClannValidationError("Primary household name cannot be empty.")
         if not self.people:
             raise ClannValidationError("A Clann must contain at least one person.")
 
@@ -50,9 +48,7 @@ class ClannInput:
             person.personValidate()
 
         if sum(person.is_primary for person in self.people) != 1:
-            raise ClannValidationError(
-                "A Clann must have exactly one primary person."
-            )
+            raise ClannValidationError("A Clann must have exactly one primary person.")
         if not any(person.lives_in_primary_household for person in self.people):
             raise ClannValidationError(
                 "The primary household must have at least one resident."

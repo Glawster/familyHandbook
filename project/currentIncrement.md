@@ -2,7 +2,7 @@
 
 ## Increment
 
-Banking Core.
+Banking Core identity cleanup.
 
 ## Branch
 
@@ -10,48 +10,35 @@ Banking Core.
 
 ## Objective
 
-Implement the first Banking domain slice on the shared knowledge kernel so a
-real banking relationship can be represented without loose capture dictionaries
-or document-shaped data.
+Reuse canonical shared-domain identities during Banking capture: Clann people
+instead of duplicate Contacts, and existing Organisation/FinancialInstitution
+records instead of a new provider per relationship.
 
 ## Scope
 
-- `FinancialInstitution` linked to shared `Organisation`.
-- `BankingRelationship` as the real-world relationship aggregate.
-- `AccountParty` ownership and interest, distinct from authority and access.
-- Versioned `AccountContinuityRole` registry.
-- Typed banking identifiers with masking, provenance and prohibited-secret
-  rejection.
-- `BalanceObservation` as a dated `Observation` of `Money`.
-- Lifecycle/status, provenance, classification and review state using shared
-  types.
-- Persistence through the shared `RecordStore` port.
-- CLI/curses `eolas capture banking` creating typed Banking records.
+- New Clann bootstrap allocates opaque `rec_` IDs for people and households.
+- Bootstrap persists `Person` aggregates to the Clann `RecordStore`.
+- Legacy prototype slug IDs remain readable; they are not allocated to new
+  records.
+- Banking capture resolves `ownerRefs` and unique exact person names to
+  existing `Person` records.
+- Unresolved owner names may still create a `Contact`.
+- Duplicate person or institution names require explicit references.
+- `institutionRef` / `organisationRef` reuse existing providers.
+- Unique exact institution names reuse a stored provider.
+- `createInstitution` forces a new provider.
 
 ## Explicit exclusion
 
-Do not implement in this increment:
-
-- money movements and payment arrangements;
-- transaction history, Direct Debits, standing orders or cancellation;
-- bank-statement parsing, OCR or Open Banking;
-- automatic institution lookup;
-- executor or attorney banking workflows;
-- banking reports;
-- the full continuity dependency graph for Banking;
-- cloud synchronisation or production encryption/key-management changes.
+Do not implement money movements, payment arrangements, fuzzy matching,
+automatic institution directories, or destructive identity migration.
 
 ## Expected exit criteria
 
-- Domain tests cover institution and relationship creation, opaque IDs, Clann
-  isolation, joint ownership, non-owner authority references, continuity roles,
-  identifiers, balances, provenance, classification, review, persistence and
-  version conflicts.
-- Capture/CLI adapter creates typed Banking records and existing non-banking
-  capture continues to work.
-- Tests use conspicuously fictional institutions and identifiers and require
-  no network.
-- Requirement 009 is updated but not marked completed.
+- Capture tests prove Person reuse, joint owners, Contact-only-for-unknown,
+  duplicate-name rejection, institution reuse, explicit refs winning over
+  names, and no duplicate Organisation on reuse.
+- New bootstrap people use opaque IDs; legacy slug IDs still construct.
 - `pytest` passes.
 - `manageProject --check` reports zero failures and zero warnings.
 

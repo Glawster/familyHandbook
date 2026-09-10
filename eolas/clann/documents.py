@@ -28,8 +28,7 @@ def clannDocumentBuild(
         "primaryPersonRef": personIds[primaryIndex],
         "primaryHouseholdRef": householdId,
         "people": [
-            {"personRef": personIds[index]}
-            for index in range(len(clann.people))
+            {"personRef": personIds[index]} for index in range(len(clann.people))
         ],
         "households": [{"householdRef": householdId}],
         "metadata": {
@@ -108,8 +107,7 @@ def personDocumentBuild(
         "isPrimary": person.is_primary,
         "householdMemberships": memberships,
         "sections": {
-            name: section["filename"]
-            for name, section in PERSON_SECTIONS.items()
+            name: section["filename"] for name, section in PERSON_SECTIONS.items()
         },
         "metadata": {
             "status": "active",

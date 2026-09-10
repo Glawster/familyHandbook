@@ -102,6 +102,21 @@ def testRecordIdentityIsStableOpaqueAndOwned() -> None:
     assert identity.owner_module == "shared"
 
 
+def testRecordIdentityAcceptsLegacyPrototypeIdsWithoutAllocatingThem() -> None:
+    from eolas.domain.values import identityLegacy, identityOpaque
+
+    legacy = RecordIdentity("person-alex-example", CLANN, "person", "shared")
+    household = RecordIdentity("household-family-home", CLANN, "household", "shared")
+    created = RecordIdentity.identityCreate(CLANN, "person", "shared")
+
+    assert identityLegacy(legacy.record_id)
+    assert identityLegacy(household.record_id)
+    assert identityOpaque(created.record_id)
+    assert not identityLegacy(created.record_id)
+    with pytest.raises(DomainValidationError, match="opaque rec_"):
+        RecordIdentity("alex-example", CLANN, "person", "shared")
+
+
 def testRecordReferenceRejectsCrossClann() -> None:
     reference = _identity("person").referenceCreate()
 

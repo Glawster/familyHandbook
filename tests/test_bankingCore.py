@@ -27,10 +27,12 @@ from eolas.banking.service import (
 from eolas.capture.models import CaptureInput, CaptureValidationError
 from eolas.capture.service import capturePrepare, captureWrite
 from eolas.clann.models import ClannInput, PersonInput
+from eolas.clann.records import clannRecordStoreOpen
 from eolas.clann.service import clannCreate
 from eolas.cli import cliRun
-from eolas.domain.codec import organisationEncode
-from eolas.domain.entities import Organisation
+from eolas.domain.codec import organisationEncode, personEncode
+from eolas.domain.directory import contactsLoad, peopleLoad
+from eolas.domain.entities import Organisation, Person
 from eolas.domain.storage import VersionConflictError, WriteOperation, YamlRecordStore
 from eolas.domain.values import (
     Classification,
@@ -572,7 +574,7 @@ def testCaptureAdapterCreatesTypedBankingRecords(tmp_path: Path) -> None:
     )
 
     targetPath, document = capturePrepare(capture, clann, timestampProvider=lambda: NOW)
-    assert not targetPath.exists()
+    assert targetPath == clann / "shared" / "records.yaml"
     assert document["aggregateType"] == "bankingRelationship"
     assert document["institution"]["displayName"] == "Northbridge Fictional Mutual"
     assert document["relationship"]["ownershipType"] == "joint"
@@ -637,10 +639,11 @@ def testCliCaptureBankingWritesTypedStore(
         "--source",
         "fictional passbook",
     ]
-    storePath = clann / "shared/banking/store.yaml"
+    storePath = clann / "shared/records.yaml"
 
     assert cliRun(arguments) == 0
-    assert not storePath.exists()
+    store = YamlRecordStore(storePath, "clann-example-clann")
+    assert store.recordsList(aggregate_type="bankingRelationship") == ()
     assert "Preview complete; no files were created" in capsys.readouterr().out
 
     assert cliRun([*arguments, "--confirm"]) == 0
@@ -683,3 +686,306 @@ def testCaptureStillRejectsProhibitedSecrets() -> None:
     }
     with pytest.raises(CaptureValidationError, match="Prohibited"):
         CaptureInput("banking", "Bills", fields, "statement").captureValidate()
+
+
+def _exampleClann(tmp_path: Path, people: list[PersonInput] | None = None) -> Path:
+    return clannCreate(
+        ClannInput(
+            "Example Clann",
+            "Example Home",
+            people or [PersonInput("Alex Example", "Alex", "householder", True, True)],
+        ),
+        tmp_path,
+        timestampProvider=lambda: NOW,
+    )
+
+
+def _bankingFields(**overrides: object) -> dict:
+    fields: dict = {
+        "institution": "Northbridge Fictional Mutual",
+        "institutionType": "bank",
+        "accountCategory": "current",
+        "productName": "Fictional Everyday Current",
+        "purpose": "Household bills",
+        "owners": "Alex Example",
+        "status": "active",
+        "classification": "confidential",
+        "lastReviewed": "2026-09-01",
+    }
+    fields.update(overrides)
+    return fields
+
+
+def testCaptureReusesExistingPersonAsSoleOwner(tmp_path: Path) -> None:
+    clannPath = _exampleClann(tmp_path)
+    people = peopleLoad(clannRecordStoreOpen(clannPath, "clann-example-clann"))
+    alex = people[0]
+    capture = CaptureInput("banking", "Bills", _bankingFields(), "fictional statement")
+
+    targetPath, document = capturePrepare(
+        capture, clannPath, timestampProvider=lambda: NOW
+    )
+    captureWrite(targetPath, document)
+    store = YamlRecordStore(targetPath, "clann-example-clann")
+    relationship = BankingService(store).relationshipGet(
+        RecordIdentity(
+            document["id"], "clann-example-clann", "bankingRelationship", "banking"
+        )
+    )
+
+    assert relationship.parties[0].party.record_id == alex.identity.record_id
+    assert relationship.parties[0].party.record_type == "person"
+    assert contactsLoad(store) == ()
+    assert all(
+        operation["identity"]["aggregateType"] != "contact"
+        for operation in document["operations"]
+    )
+
+
+def testCaptureReusesTwoPeopleAsJointOwners(tmp_path: Path) -> None:
+    clannPath = _exampleClann(
+        tmp_path,
+        [
+            PersonInput("Morgan Example", "Morgan", "householder", True, True),
+            PersonInput("Riley Example", "Riley", "partner", True),
+        ],
+    )
+    people = {
+        person.display_name: person
+        for person in peopleLoad(clannRecordStoreOpen(clannPath, "clann-example-clann"))
+    }
+    capture = CaptureInput(
+        "banking",
+        "Joint bills",
+        _bankingFields(owners=["Morgan Example", "Riley Example"]),
+        "fictional statement",
+    )
+
+    targetPath, document = capturePrepare(
+        capture, clannPath, timestampProvider=lambda: NOW
+    )
+    captureWrite(targetPath, document)
+    store = YamlRecordStore(targetPath, "clann-example-clann")
+    relationship = BankingService(store).relationshipGet(
+        RecordIdentity(
+            document["id"], "clann-example-clann", "bankingRelationship", "banking"
+        )
+    )
+
+    assert relationship.ownership_type == "joint"
+    assert {party.party.record_id for party in relationship.parties} == {
+        people["Morgan Example"].identity.record_id,
+        people["Riley Example"].identity.record_id,
+    }
+    assert contactsLoad(store) == ()
+
+
+def testCaptureUnresolvedPersonBecomesContact(tmp_path: Path) -> None:
+    clannPath = _exampleClann(tmp_path)
+    capture = CaptureInput(
+        "banking",
+        "Bills",
+        _bankingFields(owners="Pat External"),
+        "fictional statement",
+    )
+
+    targetPath, document = capturePrepare(
+        capture, clannPath, timestampProvider=lambda: NOW
+    )
+    captureWrite(targetPath, document)
+    store = YamlRecordStore(targetPath, "clann-example-clann")
+    relationship = BankingService(store).relationshipGet(
+        RecordIdentity(
+            document["id"], "clann-example-clann", "bankingRelationship", "banking"
+        )
+    )
+
+    assert relationship.parties[0].party.record_type == "contact"
+    assert contactsLoad(store)[0].display_name == "Pat External"
+
+
+def testCaptureDuplicatePersonNamesRequireOwnerRefs(tmp_path: Path) -> None:
+    clannPath = _exampleClann(tmp_path)
+    store = clannRecordStoreOpen(clannPath, "clann-example-clann")
+    duplicate = Person(
+        RecordIdentity.identityCreate("clann-example-clann", "person", "shared"),
+        "Alex Example",
+        Classification.PRIVATE,
+    )
+    store.recordsCommit((WriteOperation(personEncode(duplicate), None),))
+    capture = CaptureInput("banking", "Bills", _bankingFields(), "fictional statement")
+
+    with pytest.raises(DomainValidationError, match="ownerRefs"):
+        capturePrepare(capture, clannPath, timestampProvider=lambda: NOW)
+
+    people = peopleLoad(store)
+    capture = CaptureInput(
+        "banking",
+        "Bills",
+        _bankingFields(ownerRefs=[people[0].identity.record_id]),
+        "fictional statement",
+    )
+    targetPath, document = capturePrepare(
+        capture, clannPath, timestampProvider=lambda: NOW
+    )
+    captureWrite(targetPath, document)
+    relationship = BankingService(store).relationshipGet(
+        RecordIdentity(
+            document["id"], "clann-example-clann", "bankingRelationship", "banking"
+        )
+    )
+    assert relationship.parties[0].party.record_id == people[0].identity.record_id
+
+
+def testCaptureReusesExistingFinancialInstitution(tmp_path: Path) -> None:
+    clannPath = _exampleClann(tmp_path)
+    first = CaptureInput("banking", "Bills", _bankingFields(), "fictional statement")
+    targetPath, firstDocument = capturePrepare(
+        first, clannPath, timestampProvider=lambda: NOW
+    )
+    captureWrite(targetPath, firstDocument)
+    institutionId = firstDocument["institution"]["id"]
+    organisationId = firstDocument["institution"]["organisationId"]
+
+    second = CaptureInput(
+        "banking",
+        "Savings",
+        _bankingFields(
+            purpose="Emergency reserve",
+            accountCategory="savings",
+            institutionRef=institutionId,
+        ),
+        "fictional statement",
+    )
+    targetPath, secondDocument = capturePrepare(
+        second, clannPath, timestampProvider=lambda: NOW
+    )
+    captureWrite(targetPath, secondDocument)
+    store = YamlRecordStore(targetPath, "clann-example-clann")
+
+    assert secondDocument["institution"]["id"] == institutionId
+    assert secondDocument["institution"]["organisationId"] == organisationId
+    assert len(store.recordsList(aggregate_type="organisation")) == 1
+    assert len(store.recordsList(aggregate_type="financialInstitution")) == 1
+    assert len(store.recordsList(aggregate_type="bankingRelationship")) == 2
+
+
+def testCaptureUniqueInstitutionNameReusesProvider(tmp_path: Path) -> None:
+    clannPath = _exampleClann(tmp_path)
+    first = CaptureInput("banking", "Bills", _bankingFields(), "fictional statement")
+    targetPath, firstDocument = capturePrepare(
+        first, clannPath, timestampProvider=lambda: NOW
+    )
+    captureWrite(targetPath, firstDocument)
+    second = CaptureInput(
+        "banking",
+        "Savings",
+        _bankingFields(purpose="Emergency reserve", accountCategory="savings"),
+        "fictional statement",
+    )
+    targetPath, secondDocument = capturePrepare(
+        second, clannPath, timestampProvider=lambda: NOW
+    )
+    captureWrite(targetPath, secondDocument)
+    store = YamlRecordStore(targetPath, "clann-example-clann")
+
+    assert secondDocument["institution"]["id"] == firstDocument["institution"]["id"]
+    assert len(store.recordsList(aggregate_type="organisation")) == 1
+    assert len(store.recordsList(aggregate_type="financialInstitution")) == 1
+
+
+def testCaptureInstitutionRefWinsOverDisplayName(tmp_path: Path) -> None:
+    clannPath = _exampleClann(tmp_path)
+    first = CaptureInput("banking", "Bills", _bankingFields(), "fictional statement")
+    targetPath, firstDocument = capturePrepare(
+        first, clannPath, timestampProvider=lambda: NOW
+    )
+    captureWrite(targetPath, firstDocument)
+
+    second = CaptureInput(
+        "banking",
+        "Other label",
+        _bankingFields(
+            institution="Willowmere Example Building Society",
+            institutionRef=firstDocument["institution"]["id"],
+            purpose="Savings",
+        ),
+        "fictional statement",
+    )
+    targetPath, secondDocument = capturePrepare(
+        second, clannPath, timestampProvider=lambda: NOW
+    )
+    captureWrite(targetPath, secondDocument)
+    store = YamlRecordStore(targetPath, "clann-example-clann")
+
+    assert secondDocument["institution"]["id"] == firstDocument["institution"]["id"]
+    assert len(store.recordsList(aggregate_type="financialInstitution")) == 1
+
+
+def testCaptureDuplicateInstitutionNamesRequireExplicitRef(tmp_path: Path) -> None:
+    clannPath = _exampleClann(tmp_path)
+    first = CaptureInput(
+        "banking",
+        "Bills",
+        _bankingFields(createInstitution=True),
+        "fictional statement",
+    )
+    targetPath, _document = capturePrepare(
+        first, clannPath, timestampProvider=lambda: NOW
+    )
+    captureWrite(targetPath, _document)
+    second = CaptureInput(
+        "banking",
+        "Other bills",
+        _bankingFields(createInstitution=True, purpose="Second provider"),
+        "fictional statement",
+    )
+    targetPath, secondDocument = capturePrepare(
+        second, clannPath, timestampProvider=lambda: NOW
+    )
+    captureWrite(targetPath, secondDocument)
+    assert (
+        len(
+            YamlRecordStore(targetPath, "clann-example-clann").recordsList(
+                aggregate_type="financialInstitution"
+            )
+        )
+        == 2
+    )
+
+    third = CaptureInput(
+        "banking", "Third", _bankingFields(purpose="Ambiguous"), "fictional statement"
+    )
+    with pytest.raises(DomainValidationError, match="institutionRef"):
+        capturePrepare(third, clannPath, timestampProvider=lambda: NOW)
+
+
+def testCaptureRejectsUnknownInstitutionAndOwnerRefs(tmp_path: Path) -> None:
+    clannPath = _exampleClann(tmp_path)
+    missingInstitution = CaptureInput(
+        "banking",
+        "Bills",
+        _bankingFields(
+            institutionRef=RecordIdentity.identityCreate(
+                "clann-example-clann", "financialInstitution", "banking"
+            ).record_id
+        ),
+        "fictional statement",
+    )
+    with pytest.raises(DomainValidationError, match="institutionRef"):
+        capturePrepare(missingInstitution, clannPath, timestampProvider=lambda: NOW)
+
+    missingOwner = CaptureInput(
+        "banking",
+        "Bills",
+        _bankingFields(
+            ownerRefs=[
+                RecordIdentity.identityCreate(
+                    "clann-fictional-willowmere", "person", "shared"
+                ).record_id
+            ]
+        ),
+        "fictional statement",
+    )
+    with pytest.raises(DomainValidationError, match="Unknown party|Cross-Clann"):
+        capturePrepare(missingOwner, clannPath, timestampProvider=lambda: NOW)

@@ -4,7 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Callable, Mapping, Optional
 
-from eolas.domain.entities import Contact, Organisation, OrganisationBrand
+from eolas.domain.entities import Contact, Organisation, OrganisationBrand, Person
 from eolas.domain.storage import StoredRecord
 from eolas.domain.values import (
     Classification,
@@ -28,6 +28,7 @@ from eolas.domain.values import (
 
 ORGANISATION_SCHEMA = "organisation"
 CONTACT_SCHEMA = "contact"
+PERSON_SCHEMA = "person"
 SHARED_SCHEMA_VERSION = 1
 TValueDecode = Callable[[Any], Any]
 TValueEncode = Callable[[Any], Any]
@@ -63,6 +64,36 @@ def contactEncode(contact: Contact) -> StoredRecord:
             "representedParty": (
                 None if represented is None else referenceEncode(represented)
             ),
+        },
+    )
+
+
+## person
+
+
+def personDecode(record: StoredRecord) -> Person:
+    """Reconstitute a Person aggregate from a stored envelope."""
+    schemaValidate(record, PERSON_SCHEMA, "person")
+    payload = record.payload
+    return Person(
+        record.identity,
+        str(payload["displayName"]),
+        Classification(str(payload["classification"])),
+        lifecycleDecode(payload.get("lifecycle", {})),
+    )
+
+
+def personEncode(person: Person) -> StoredRecord:
+    """Encode a Person without depending on a storage technology."""
+    return StoredRecord(
+        person.identity,
+        PERSON_SCHEMA,
+        SHARED_SCHEMA_VERSION,
+        0,
+        {
+            "displayName": person.display_name,
+            "classification": person.classification.value,
+            "lifecycle": lifecycleEncode(person.lifecycle),
         },
     )
 

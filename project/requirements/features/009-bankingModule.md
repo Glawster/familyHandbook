@@ -1194,12 +1194,12 @@ workflow event must record the guidance ID and version/effective date it used.
 - Implementation: shared Phase 1 kernel; Banking Core in `eolas/banking/`
   (`FinancialInstitution`, `BankingRelationship`, `AccountParty`, continuity
   roles, typed identifiers, `BalanceObservation`); typed `eolas capture banking`
-  adapter; money movements, payment arrangements, workflows and projections
-  pending
+  adapter with Person and institution reuse; money movements, payment
+  arrangements, workflows and projections pending
 - Tests: shared-kernel tests plus `tests/test_bankingCore.py` for institution
   and relationship creation, isolation, ownership, authority links, identifiers,
-  balances, persistence, conflicts and capture; remaining 009 acceptance
-  criteria pending
+  balances, persistence, conflicts, capture and identity reuse; remaining 009
+  acceptance criteria pending
 - Documentation: [product vision](../../../documentation/productVision.md),
   [principles](../../../documentation/principles.md),
   [domain model](../../../documentation/domainModel.md),
@@ -1220,3 +1220,5 @@ workflow event must record the guidance ID and version/effective date it used.
 - 2026-07-31: separated mutable UK guidance, clarified credit-card ownership,
   and added typed continuity roles and bidirectional dependency graphs.
 - 2026-09-10: Banking Core implemented; requirement remains in progress.
+- 2026-09-10: Banking capture reuses Clann people and financial institutions
+  by stable identity; new bootstrap allocates opaque `rec_` IDs.

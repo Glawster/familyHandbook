@@ -14,8 +14,13 @@ from eolas.clann.documents import (
 )
 from eolas.clann.manifest import CLANN_DIRECTORIES, PERSON_SECTIONS
 from eolas.clann.models import ClannInput
+from eolas.clann.records import RECORDS_RELATIVE
 from eolas.clann.slugs import slugCreate, slugsCreateUnique
 from eolas.clann.yaml_io import yamlWrite
+from eolas.domain.codec import personEncode
+from eolas.domain.entities import Person
+from eolas.domain.storage import WriteOperation, YamlRecordStore
+from eolas.domain.values import Classification, RecordIdentity
 
 
 class ClannCreationError(RuntimeError):
@@ -36,9 +41,7 @@ def clannCreate(
     clann.clannValidate()
     outputDirectory = outputDirectory.expanduser().resolve()
     if outputDirectory.exists() and not outputDirectory.is_dir():
-        raise ClannCreationError(
-            f"Output path is not a directory: {outputDirectory}"
-        )
+        raise ClannCreationError(f"Output path is not a directory: {outputDirectory}")
 
     clannsPath = outputDirectory / "clanns"
     clannsPath.mkdir(parents=True, exist_ok=True)
@@ -60,15 +63,15 @@ def clannCreate(
     personSlugs = slugsCreateUnique(person.full_name for person in clann.people)
     clannId = f"clann-{clannSlug}"
     householdSlug = slugCreate(clann.primary_household_name)
-    householdId = f"household-{householdSlug}"
+    householdId = RecordIdentity.identityCreate(
+        clannId, "household", "shared"
+    ).record_id
     personIds: Dict[int, str] = {
-        index: f"person-{slug}"
-        for index, slug in enumerate(personSlugs)
+        index: RecordIdentity.identityCreate(clannId, "person", "shared").record_id
+        for index in range(len(clann.people))
     }
 
-    temporaryPath = Path(
-        tempfile.mkdtemp(prefix=f".{clannSlug}-", dir=clannsPath)
-    )
+    temporaryPath = Path(tempfile.mkdtemp(prefix=f".{clannSlug}-", dir=clannsPath))
     try:
         _clannTreeWrite(
             temporaryPath,
@@ -119,9 +122,7 @@ def _clannTreeWrite(
     householdPath.mkdir()
     yamlWrite(
         householdPath / "household.yaml",
-        householdDocumentBuild(
-            clann, clannId, householdId, personIds, timestamp
-        ),
+        householdDocumentBuild(clann, clannId, householdId, personIds, timestamp),
     )
 
     for index, person in enumerate(clann.people):
@@ -130,11 +131,35 @@ def _clannTreeWrite(
         personId = personIds[index]
         yamlWrite(
             personPath / "person.yaml",
-            personDocumentBuild(
-                person, personId, clannId, householdId, timestamp
-            ),
+            personDocumentBuild(person, personId, clannId, householdId, timestamp),
         )
         yamlWrite(
             personPath / PERSON_SECTIONS["identity"]["filename"],
             identityDocumentBuild(person, personId, timestamp),
         )
+
+    _peopleStoreWrite(rootPath, clann, clannId, personIds)
+
+
+def _peopleStoreWrite(
+    rootPath: Path,
+    clann: ClannInput,
+    clannId: str,
+    personIds: Dict[int, str],
+) -> None:
+    """Persist Person aggregates through the shared RecordStore port."""
+    store = YamlRecordStore(rootPath / RECORDS_RELATIVE, clannId)
+    operations = tuple(
+        WriteOperation(
+            personEncode(
+                Person(
+                    RecordIdentity(personIds[index], clannId, "person", "shared"),
+                    person.full_name.strip(),
+                    Classification.PRIVATE,
+                )
+            ),
+            None,
+        )
+        for index, person in enumerate(clann.people)
+    )
+    store.recordsCommit(operations)

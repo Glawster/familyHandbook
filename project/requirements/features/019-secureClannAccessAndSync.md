@@ -236,7 +236,7 @@ The open data/domain model and backup/export path must not depend on the continu
   - [005 — Information classification](../../adr/005-informationClassification.md);
   - [007 — Knowledge before documents](../../adr/007-knowledgeBeforeDocuments.md);
   - [011 — Platform-resolved private data root](../../adr/011-platformPrivateDataRoot.md);
-  - [012 — Local-first encrypted Clann sharing and synchronisation](../../adr/012-secureClannSharingAndSync.md).
+  - [018 — Local-first encrypted Clann sharing and synchronisation](../../adr/018-secureClannSharingAndSync.md).
 
 ## Verification
 
@@ -273,7 +273,7 @@ Banking and other domain modules should consume these shared capabilities rather
 - Tests: pending
 - Documentation: pending
 - Pull request: pending
-- ADR: [ADR-0012](../../adr/012-secureClannSharingAndSync.md)
+- ADR: [ADR-0018](../../adr/018-secureClannSharingAndSync.md)
 
 ## Change history
 

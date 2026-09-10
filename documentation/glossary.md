@@ -260,5 +260,8 @@ an obligation is paid. It is not part of Banking Core.
 
 **Record identity** — A stable opaque Clann-scoped ID with aggregate type and
 one owner module; it is never a name, filename, slug or provider reference.
+New records use `rec_` identifiers. Older prototype IDs such as
+`person-alex-example` remain readable during migration but are not allocated
+to new shared-domain records.
 
 **Unknown** — The fact applies but its value is not known.

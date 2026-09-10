@@ -108,6 +108,15 @@ class BankingService:
         """Load a FinancialInstitution by opaque identity."""
         return institutionDecode(self.store.recordGet(identity))
 
+    def institutionsList(self) -> Tuple[FinancialInstitution, ...]:
+        """Return current FinancialInstitution aggregates in this Clann."""
+        return tuple(
+            institutionDecode(record)
+            for record in self.store.recordsList(
+                aggregate_type=INSTITUTION_AGGREGATE, owner_module=BANKING_MODULE
+            )
+        )
+
     ## relationship
 
     def relationshipCreate(

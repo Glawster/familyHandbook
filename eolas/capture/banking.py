@@ -27,14 +27,26 @@ from eolas.banking.service import (
 )
 from eolas.capture.adapter import captureCommandBuild
 from eolas.capture.models import CaptureInput
+from eolas.clann.records import clannRecordStoreOpen, clannRecordStorePath
 from eolas.domain.codec import (
     contactEncode,
     identityEncode,
     organisationEncode,
 )
+from eolas.domain.directory import (
+    organisationLoad,
+    organisationsLoad,
+    partyLoadById,
+    peopleNamed,
+)
 from eolas.domain.entities import Contact, Organisation
 from eolas.domain.security import classificationResolve
-from eolas.domain.storage import StoredRecord, WriteOperation, YamlRecordStore
+from eolas.domain.storage import (
+    RecordStore,
+    StoredRecord,
+    WriteOperation,
+    YamlRecordStore,
+)
 from eolas.domain.values import (
     Classification,
     DomainValidationError,
@@ -44,6 +56,7 @@ from eolas.domain.values import (
     Observation,
     Provenance,
     RecordIdentity,
+    RecordReference,
     ReviewState,
 )
 
@@ -65,8 +78,9 @@ def bankingCapturePrepare(
     captured_at: datetime,
 ) -> tuple[Path, Dict[str, Any]]:
     """Validate capture input and return the store path plus a typed preview."""
-    built = bankingRecordsBuild(capture, clann_id, captured_at)
-    targetPath = clannPath / "shared" / "banking" / "store.yaml"
+    store = clannRecordStoreOpen(clannPath, clann_id)
+    built = bankingRecordsBuild(capture, clann_id, captured_at, store)
+    targetPath = clannRecordStorePath(clannPath)
     return targetPath, bankingDocumentBuild(built, capture, targetPath)
 
 
@@ -107,34 +121,33 @@ def bankingCaptureWrite(targetPath: Path, document: Mapping[str, Any]) -> Path:
 
 
 def bankingRecordsBuild(
-    capture: CaptureInput, clann_id: str, captured_at: datetime
+    capture: CaptureInput,
+    clann_id: str,
+    captured_at: datetime,
+    store: RecordStore,
 ) -> Dict[str, Any]:
-    """Turn loose capture fields into Organisation, institution and relationship."""
+    """Turn capture fields into typed Banking records, reusing store identities."""
     command = captureCommandBuild(capture, clann_id, captured_at)
     fields = capture.fields
     classification = classificationResolve(command.classification)
     provenance = command.provenance
     review = _reviewBuild(fields, provenance)
     findings: List[str] = list(review.findings)
+    service = BankingService(store)
 
-    organisation = Organisation(
-        RecordIdentity.identityCreate(clann_id, "organisation", "shared"),
-        _organisationName(fields, command.label, findings),
+    organisation, institution, newOrganisation, newInstitution = _providerResolve(
+        store,
+        service,
+        clann_id,
+        fields,
+        command.label,
         classification,
-    )
-    institution = institutionBuild(
-        InstitutionCreateCommand(
-            clann_id,
-            organisation.identity.referenceCreate(),
-            _institutionDisplay(fields, command.label),
-            str(fields.get("institutionType", "unknown")),
-            classification,
-            provenance,
-            review,
-        )
+        provenance,
+        review,
+        findings,
     )
     parties, contacts = _partiesBuild(
-        clann_id, fields, classification, provenance, findings
+        store, clann_id, fields, classification, provenance, findings
     )
     ownership_type = _ownershipType(fields, parties)
     relationship = relationshipBuild(
@@ -171,6 +184,8 @@ def bankingRecordsBuild(
         "contacts": tuple(contacts),
         "institution": institution,
         "relationship": relationship,
+        "newOrganisation": newOrganisation,
+        "newInstitution": newInstitution,
         "classification": classification,
         "label": command.label,
         "clann_id": clann_id,
@@ -184,12 +199,15 @@ def bankingDocumentBuild(
     organisation: Organisation = built["organisation"]
     institution: FinancialInstitution = built["institution"]
     relationship: BankingRelationship = built["relationship"]
-    operations = [
-        _operationEncode(organisationEncode(organisation)),
-        *(_operationEncode(contactEncode(contact)) for contact in built["contacts"]),
-        _operationEncode(institutionEncode(institution)),
-        _operationEncode(relationshipEncode(relationship)),
-    ]
+    operations = []
+    if built.get("newOrganisation"):
+        operations.append(_operationEncode(organisationEncode(organisation)))
+    operations.extend(
+        _operationEncode(contactEncode(contact)) for contact in built["contacts"]
+    )
+    if built.get("newInstitution"):
+        operations.append(_operationEncode(institutionEncode(institution)))
+    operations.append(_operationEncode(relationshipEncode(relationship)))
     return {
         "schema": "eolas/bankingRelationship/v1",
         "schemaVersion": 1,
@@ -323,39 +341,62 @@ def _ownershipType(fields: Mapping[str, Any], parties: Sequence[AccountParty]) -
     return "unknown"
 
 
+def _booleanFlag(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"true", "yes", "1"}
+
+
+def _idsList(value: Any) -> List[str]:
+    if value in (None, "", [], ()):
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    return [part.strip() for part in str(value).split(",") if part.strip()]
+
+
+def _institutionIdentity(clann_id: str, record_id: str) -> RecordIdentity:
+    return RecordIdentity(record_id, clann_id, INSTITUTION_AGGREGATE, BANKING_MODULE)
+
+
+def _organisationIdentity(clann_id: str, record_id: str) -> RecordIdentity:
+    return RecordIdentity(record_id, clann_id, "organisation", "shared")
+
+
 def _partiesBuild(
+    store: RecordStore,
     clann_id: str,
     fields: Mapping[str, Any],
     classification: Classification,
     provenance: Provenance,
     findings: List[str],
 ) -> tuple[List[AccountParty], List[Contact]]:
+    ownerRefs = _idsList(fields.get("ownerRefs"))
     raw = fields.get("owners")
-    names: List[str] = []
-    if raw in (None, "", "unknown"):
-        findings.append("account owners unknown")
-        return [], []
-    if isinstance(raw, list):
-        names = [str(item).strip() for item in raw if str(item).strip()]
-    else:
-        names = [part.strip() for part in str(raw).split(",") if part.strip()]
     contacts: List[Contact] = []
     parties: List[AccountParty] = []
+    if ownerRefs:
+        resolved = [
+            _partyFromRef(store, clann_id, record_id) for record_id in ownerRefs
+        ]
+    elif raw in (None, "", "unknown"):
+        findings.append("account owners unknown")
+        return [], []
+    else:
+        names = _idsList(raw)
+        resolved = [
+            _partyFromName(store, clann_id, name, classification, contacts)
+            for name in names
+        ]
     signing = (
         Fact.factKnown("eitherToSign")
-        if len(names) > 1
+        if len(resolved) > 1
         else Fact(FactState.NOT_APPLICABLE)
     )
-    for name in names:
-        contact = Contact(
-            RecordIdentity.identityCreate(clann_id, "contact", "shared"),
-            name,
-            classification,
-        )
-        contacts.append(contact)
+    for partyRef in resolved:
         parties.append(
             AccountParty(
-                contact.identity.referenceCreate(),
+                partyRef,
                 "legalHolder",
                 "legalAndBeneficial",
                 provenance,
@@ -364,6 +405,224 @@ def _partiesBuild(
             )
         )
     return parties, contacts
+
+
+def _partyFromName(
+    store: RecordStore,
+    clann_id: str,
+    name: str,
+    classification: Classification,
+    contacts: List[Contact],
+) -> RecordReference:
+    matches = peopleNamed(store, name)
+    if len(matches) > 1:
+        raise DomainValidationError(
+            f"Multiple Clann people are named {name!r}; supply ownerRefs."
+        )
+    if len(matches) == 1:
+        person = matches[0]
+        if person.identity.clann_id != clann_id:
+            raise DomainValidationError("Cross-Clann references are prohibited.")
+        return person.identity.referenceCreate()
+    contact = Contact(
+        RecordIdentity.identityCreate(clann_id, "contact", "shared"),
+        name,
+        classification,
+    )
+    contacts.append(contact)
+    return contact.identity.referenceCreate()
+
+
+def _partyFromRef(store: RecordStore, clann_id: str, record_id: str) -> RecordReference:
+    party = partyLoadById(store, clann_id, record_id)
+    if party.identity.clann_id != clann_id:
+        raise DomainValidationError("Cross-Clann references are prohibited.")
+    return party.identity.referenceCreate()
+
+
+def _providerResolve(
+    store: RecordStore,
+    service: BankingService,
+    clann_id: str,
+    fields: Mapping[str, Any],
+    label: str,
+    classification: Classification,
+    provenance: Provenance,
+    review: ReviewState,
+    findings: List[str],
+) -> tuple[Organisation, FinancialInstitution, bool, bool]:
+    institutionRef = str(fields.get("institutionRef") or "").strip()
+    organisationRef = str(fields.get("organisationRef") or "").strip()
+    forceCreate = _booleanFlag(fields.get("createInstitution"))
+    displayName = _institutionDisplay(fields, label)
+    if institutionRef:
+        try:
+            institution = service.institutionGet(
+                _institutionIdentity(clann_id, institutionRef)
+            )
+            organisation = organisationLoad(
+                store,
+                RecordIdentity(
+                    institution.organisation.record_id,
+                    clann_id,
+                    "organisation",
+                    "shared",
+                ),
+            )
+        except (KeyError, DomainValidationError) as error:
+            raise DomainValidationError(
+                "Unknown or cross-Clann institutionRef."
+            ) from error
+        return organisation, institution, False, False
+    if organisationRef:
+        try:
+            organisation = organisationLoad(
+                store, _organisationIdentity(clann_id, organisationRef)
+            )
+        except (KeyError, DomainValidationError) as error:
+            raise DomainValidationError(
+                "Unknown or cross-Clann organisationRef."
+            ) from error
+        linked = [
+            item
+            for item in service.institutionsList()
+            if item.organisation.record_id == organisation.identity.record_id
+        ]
+        if len(linked) > 1:
+            raise DomainValidationError(
+                "Multiple financial institutions use this organisation; "
+                "supply institutionRef."
+            )
+        if len(linked) == 1 and not forceCreate:
+            return organisation, linked[0], False, False
+        institution = _institutionCreate(
+            clann_id,
+            organisation,
+            displayName,
+            fields,
+            classification,
+            provenance,
+            review,
+        )
+        return organisation, institution, False, True
+    return _providerResolveByName(
+        store,
+        service,
+        clann_id,
+        fields,
+        displayName,
+        forceCreate,
+        classification,
+        provenance,
+        review,
+        findings,
+    )
+
+
+def _providerResolveByName(
+    store: RecordStore,
+    service: BankingService,
+    clann_id: str,
+    fields: Mapping[str, Any],
+    displayName: str,
+    forceCreate: bool,
+    classification: Classification,
+    provenance: Provenance,
+    review: ReviewState,
+    findings: List[str],
+) -> tuple[Organisation, FinancialInstitution, bool, bool]:
+    nameUnknown = fields.get("institution") in (None, "", "unknown", "notApplicable")
+    if nameUnknown:
+        _organisationName(fields, displayName, findings)
+    institutions = [
+        item for item in service.institutionsList() if item.display_name == displayName
+    ]
+    organisations = [
+        item for item in organisationsLoad(store) if item.legal_name == displayName
+    ]
+    if not forceCreate and not nameUnknown:
+        if len(institutions) > 1 or len(organisations) > 1:
+            raise DomainValidationError(
+                "Multiple providers match that name; supply institutionRef "
+                "or organisationRef."
+            )
+        if len(institutions) == 1:
+            institution = institutions[0]
+            organisation = organisationLoad(
+                store,
+                RecordIdentity(
+                    institution.organisation.record_id,
+                    clann_id,
+                    "organisation",
+                    "shared",
+                ),
+            )
+            return organisation, institution, False, False
+        if len(organisations) == 1:
+            organisation = organisations[0]
+            linked = [
+                item
+                for item in service.institutionsList()
+                if item.organisation.record_id == organisation.identity.record_id
+            ]
+            if len(linked) > 1:
+                raise DomainValidationError(
+                    "Multiple financial institutions use this organisation; "
+                    "supply institutionRef."
+                )
+            if len(linked) == 1:
+                return organisation, linked[0], False, False
+            institution = _institutionCreate(
+                clann_id,
+                organisation,
+                displayName,
+                fields,
+                classification,
+                provenance,
+                review,
+            )
+            return organisation, institution, False, True
+    organisation = Organisation(
+        RecordIdentity.identityCreate(clann_id, "organisation", "shared"),
+        (
+            _organisationName(fields, displayName, findings)
+            if nameUnknown
+            else displayName
+        ),
+        classification,
+    )
+    institution = _institutionCreate(
+        clann_id,
+        organisation,
+        displayName,
+        fields,
+        classification,
+        provenance,
+        review,
+    )
+    return organisation, institution, True, True
+
+
+def _institutionCreate(
+    clann_id: str,
+    organisation: Organisation,
+    displayName: str,
+    fields: Mapping[str, Any],
+    classification: Classification,
+    provenance: Provenance,
+    review: ReviewState,
+) -> FinancialInstitution:
+    return institutionBuild(
+        InstitutionCreateCommand(
+            clann_id,
+            organisation.identity.referenceCreate(),
+            displayName,
+            str(fields.get("institutionType", "unknown")),
+            classification,
+            provenance,
+            review,
+        )
+    )
 
 
 def _relationshipCommandFromRecord(record: StoredRecord) -> RelationshipCreateCommand:

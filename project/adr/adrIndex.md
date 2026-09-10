@@ -43,7 +43,7 @@ valid, but presentation must not become the source of truth.
 - [015: Authority and provider recognition](015-authorityAndProviderRecognition.md)
 - [016: Evidence and document references](016-evidenceAndDocumentReferences.md)
 - [017: Module and plugin boundaries](017-moduleAndPluginBoundaries.md)
-- [018: Local-first encrypted Clann sharing and synchronisation](012-secureClannSharingAndSync.md) — proposed
+- [018: Local-first encrypted Clann sharing and synchronisation](018-secureClannSharingAndSync.md) — proposed
 
 ADRs 0012–0017 settle the Phase 0 prerequisites for the shared knowledge
 kernel. ADR-0013 clarifies the apparent tension with ADR-0005: ordinary handbook

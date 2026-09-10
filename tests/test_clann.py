@@ -138,7 +138,7 @@ def test_clannCreate_generatesCompleteReloadableTree(
     assert householdPath.is_file()
 
     documents = {path: _yamlLoad(path) for path in sorted(rootPath.rglob("*.yaml"))}
-    assert len(documents) == 8
+    assert len(documents) == 9
     clannDocument = documents[rootPath / "clann.yaml"]
     people = {
         document["id"]: document
@@ -148,14 +148,43 @@ def test_clannCreate_generatesCompleteReloadableTree(
     householdDocument = documents[householdPath]
 
     assert {entry["personRef"] for entry in clannDocument["people"]} == set(people)
-    assert {member["personRef"] for member in householdDocument["members"]} == {
-        "person-morgan-river",
-        "person-jamie-river",
-    }
-    assert people["person-alex-river"]["householdMemberships"] == []
+    assert all(person_id.startswith("rec_") for person_id in people)
+    assert householdDocument["id"].startswith("rec_")
+    residentIds = {member["personRef"] for member in householdDocument["members"]}
+    assert len(residentIds) == 2
+    nonResident = next(
+        document
+        for document in people.values()
+        if document["name"]["displayName"] == "Alex River"
+    )
+    assert nonResident["householdMemberships"] == []
     for path in documents:
         assert path.read_bytes().endswith(b"\n")
         assert "!!python" not in path.read_text(encoding="utf-8")
+
+
+def test_clannCreate_writesOpaquePeopleToRecordStore(
+    tmp_path: Path,
+    clann: ClannInput,
+) -> None:
+    from eolas.clann.records import clannRecordStoreOpen
+    from eolas.domain.directory import peopleLoad
+    from eolas.domain.values import identityOpaque
+
+    rootPath = clannCreate(
+        clann, tmp_path / "data", timestampProvider=lambda: TEST_TIME
+    )
+    store = clannRecordStoreOpen(rootPath, "clann-river-clann")
+    people = peopleLoad(store)
+
+    assert len(people) == 3
+    assert {person.display_name for person in people} == {
+        "Morgan River",
+        "Jamie River",
+        "Alex River",
+    }
+    assert all(identityOpaque(person.identity.record_id) for person in people)
+    assert all(person.identity.aggregate_type == "person" for person in people)
 
 
 def test_clannCreate_rejectsExistingNonEmptyTarget(

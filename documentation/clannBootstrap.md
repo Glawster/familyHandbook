@@ -39,7 +39,15 @@ is atomic and refuses to overwrite a non-empty Clann directory.
         ├── professionals/
         ├── documents/
         └── shared/
+            └── records.yaml
 ```
+
+Directory names remain slugs for a stable filesystem layout. New person and
+household document IDs are opaque `rec_` values, not `person-alex-example`.
+Those IDs are also written as `Person` aggregates in `shared/records.yaml` so
+later modules can reuse them through the shared `RecordStore` port. Older Clann
+directories that still use slug IDs remain readable; new Clanns do not allocate
+slug identities.
 
 `clann.yaml` indexes all people and households. Household records contain
 residence memberships; person records refer to the Clann and repeat their
@@ -113,8 +121,12 @@ The preview validates mandatory fields and shows the complete record without
 writing it. Add `--confirm` to create the record atomically under
 `shared/<domain>/`. Banking capture writes typed
 `FinancialInstitution` and `BankingRelationship` records through the shared
-store at `shared/banking/store.yaml` rather than a loose per-label dictionary.
-Other capture domains still write one prototype YAML document per label. Run
+Clann store at `shared/records.yaml`. If an owner name matches exactly one
+Clann `Person`, that person is reused; unknown names become `Contact` records.
+Existing institutions are reused when `institutionRef` is supplied, or when
+exactly one stored provider has that display name. Duplicate names require
+`ownerRefs` or `institutionRef` rather than silent matching. Other capture
+domains still write one prototype YAML document per label. Run
 `eolas capture --help` to see the supported domain names. Missing mandatory
 fields are reported together so the input can be corrected in one pass.
 

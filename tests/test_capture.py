@@ -16,6 +16,7 @@ from eolas.capture.service import CaptureWriteError, capturePrepare, captureWrit
 from eolas.clann.models import ClannInput, PersonInput
 from eolas.clann.service import clannCreate
 from eolas.cli import cliRun
+from eolas.domain.storage import YamlRecordStore
 
 TEST_TIME = datetime(2026, 8, 7, 9, 30, tzinfo=timezone.utc)
 
@@ -37,6 +38,13 @@ def _validFields(domain: str) -> Dict[str, Any]:
     fields["classification"] = "confidential"
     fields["lastReviewed"] = "2026-08-07"
     return fields
+
+
+def _bankingRelationships(
+    clannPath: Path, clann_id: str = "clann-example-clann"
+) -> int:
+    store = YamlRecordStore(clannPath / "shared" / "records.yaml", clann_id)
+    return len(store.recordsList(aggregate_type="bankingRelationship"))
 
 
 @pytest.mark.parametrize(
@@ -75,7 +83,7 @@ def test_capturePrepare_bankingCreatesTypedRelationship(clannPath: Path) -> None
         capture, clannPath, timestampProvider=lambda: TEST_TIME
     )
 
-    assert targetPath == clannPath / "shared" / "banking" / "store.yaml"
+    assert targetPath == clannPath / "shared" / "records.yaml"
     assert document["aggregateType"] == "bankingRelationship"
     assert document["id"].startswith("rec_")
     assert document["institution"]["displayName"] == "Northbridge Fictional Mutual"
@@ -192,14 +200,15 @@ def test_cliCapture_previewsThenWritesOnlyWithConfirm(
         "--source",
         "2026 statement",
     ]
-    targetPath = clannPath / "shared/banking/store.yaml"
+    targetPath = clannPath / "shared/records.yaml"
 
     assert cliRun(arguments) == 0
-    assert not targetPath.exists()
+    assert _bankingRelationships(clannPath) == 0
     assert "Preview complete; no files were created" in capsys.readouterr().out
 
     assert cliRun([*arguments, "--confirm"]) == 0
     assert targetPath.is_file()
+    assert _bankingRelationships(clannPath) == 1
     assert "Capture complete:" in capsys.readouterr().out
 
 
@@ -215,7 +224,7 @@ def test_cliCapture_usesCursesWhenInputIsOmitted(
     result = cliRun(["capture", "banking", "--clann", str(clannPath), "--confirm"])
 
     assert result == 0
-    assert (clannPath / "shared/banking/store.yaml").is_file()
+    assert (clannPath / "shared/records.yaml").is_file()
 
 
 def test_cliCapture_discoversOnlyClannForSimpleCommand(
@@ -238,7 +247,7 @@ def test_cliCapture_discoversOnlyClannForSimpleCommand(
     result = cliRun(["capture", "banking", "--confirm"])
 
     assert result == 0
-    assert (clannPath / "shared/banking/store.yaml").is_file()
+    assert (clannPath / "shared/records.yaml").is_file()
 
 
 def test_cliCapture_usesClannMenuWhenSeveralExist(
@@ -261,7 +270,7 @@ def test_cliCapture_usesClannMenuWhenSeveralExist(
     result = cliRun(["capture", "banking", "--confirm"])
 
     assert result == 0
-    assert (secondPath / "shared/banking/store.yaml").is_file()
+    assert (secondPath / "shared/records.yaml").is_file()
 
 
 def test_cliCapture_usesDomainMenuWhenDomainIsOmitted(
@@ -308,4 +317,4 @@ def test_cliCapture_interactiveConfirmationSavesWithoutFlags(
     monkeypatch.setattr("eolas.cli.confirmationCapture", lambda *_args, **_kwargs: True)
 
     assert cliRun(["capture"]) == 0
-    assert (clannPath / "shared/banking/store.yaml").is_file()
+    assert (clannPath / "shared/records.yaml").is_file()

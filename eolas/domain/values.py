@@ -69,6 +69,19 @@ class Fact(Generic[T]):
         return cls(FactState.KNOWN, value)
 
 
+_LEGACY_RECORD_ID = re.compile(r"^(?:person|household)-[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+def identityLegacy(record_id: str) -> bool:
+    """Return whether an ID is a readable prototype slug, not a new allocation."""
+    return bool(_LEGACY_RECORD_ID.fullmatch(record_id))
+
+
+def identityOpaque(record_id: str) -> bool:
+    """Return whether an ID is a shared-domain rec_ identifier."""
+    return record_id.startswith("rec_") and len(record_id) >= 20
+
+
 @dataclass(frozen=True)
 class RecordIdentity:
     """Stable opaque identity owned by exactly one Clann and module."""
@@ -79,7 +92,7 @@ class RecordIdentity:
     owner_module: str
 
     def __post_init__(self) -> None:
-        if not self.record_id.startswith("rec_") or len(self.record_id) < 20:
+        if not identityOpaque(self.record_id) and not identityLegacy(self.record_id):
             raise DomainValidationError("Record IDs must be opaque rec_ identifiers.")
         if (
             not self.clann_id.strip()

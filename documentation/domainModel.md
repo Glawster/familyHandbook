@@ -399,3 +399,12 @@ the capture adapter creates typed Organisation, FinancialInstitution,
 AccountParty and BankingRelationship records through the Banking service and
 the shared `RecordStore` port. YAML remains the current local adapter, not the
 domain contract.
+
+Capture reuses canonical identities from that store. An `AccountParty` points
+at an existing `Person` when `ownerRefs` is supplied or when an owner name
+matches exactly one Clann person. It creates a `Contact` only for an unresolved
+external name. Duplicate person names are not merged; the caller must supply
+`ownerRefs`. A `FinancialInstitution` and its `Organisation` are reused when
+`institutionRef` or `organisationRef` is supplied, or when exactly one stored
+provider matches the captured name. Duplicate provider names require an
+explicit reference. `createInstitution` forces a new provider.
