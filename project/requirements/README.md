@@ -1,6 +1,6 @@
 # Requirements
 
-Next available number: 019
+Next available number: 020
 
 This directory is the source of truth for specific outcomes clanneolas.com
 intends to deliver and why. Requirements can govern handbook content, project
@@ -17,6 +17,7 @@ implementation and must distinguish current behaviour from planned work.
 - [006 — Getting Started guide](features/006-gettingStartedGuide.md) (legacy ID: HB-006)
 - [007 — Legal document custody and access](features/007-legalDocumentCustodyAndAccess.md) (legacy ID: APP-001)
 - [008 — Document Import Framework](features/008-documentImportFramework.md)
+- [019 — Secure Clann access and synchronisation](features/019-secureClannAccessAndSync.md)
 
 ## InProgress
 
